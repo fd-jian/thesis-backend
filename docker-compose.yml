@@ -13,6 +13,9 @@ services:
 
   activity-detector:
     image: activity-detector
+    build: ./activity-detector
+    depends_on:
+      - kafka
     environment:
       SPRING_PROFILES_ACTIVE: snapshot
       TZ: "Europe/Berlin"
@@ -76,9 +79,10 @@ services:
         - ./kafka-plugins:/usr/share/java/kafka-extra
     depends_on:
         - kafka
-        - kafka-connect-mqtt-builder
+        - kafka-connect-mqtt-lib
 
-  kafka-connect-mqtt-builder:
+  kafka-connect-mqtt-lib:
+    image: kafka-connect-mqtt-lib
     build: ./kafka-connect-mqtt
     volumes:
       - ./kafka-plugins:/jars
