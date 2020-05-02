@@ -14,38 +14,84 @@ services:
   activity-detector:
     image: activity-detector
     environment:
-        SPRING_PROFILES_ACTIVE: snapshot
-        TZ: "Europe/Berlin"
+      SPRING_PROFILES_ACTIVE: snapshot
+      TZ: "Europe/Berlin"
     ports:
-        - "8001:8000"
+      - "8001:8000"
 
   zookeeper:
     image: confluentinc/cp-zookeeper:5.2.1
     hostname: zookeeper
     ports:
-        - "2181:2181"
+      - "2181:2181"
     environment:
-        ZOOKEEPER_CLIENT_PORT: 2181
-        TZ: "Europe/Berlin"
+      ZOOKEEPER_CLIENT_PORT: 2181
+      TZ: "Europe/Berlin"
+    #volumes:
+      #- ./zookeeper/data:/var/lib/zookeeper/data
+      #- ./zookeeper/log:/var/lib/zookeeper/log
 
   kafka:
-    image: confluentinc/cp-kafka:5.2.1
+    image: confluentinc/cp-kafka:latest
     hostname: kafka
     ports:
-        - "9092:9092"
-        - "29092:29092"
+      - "9092:9092"
+      - "29092:29092"
     environment:
-        KAFKA_BROKER_ID: 1
-        KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-        KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-        KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-        KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-        KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-        TZ: "Europe/Berlin"
-    volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
-        - ./kafka:/kafka
-        - ./kafka-plugins:/usr/share/java/kafka-extra
-        - ./kafka-config:/kafka-config
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      TZ: "Europe/Berlin"
+    #volumes:
+      #- ./kafka/data:/var/lib/kafka/data
     depends_on:
-        - zookeeper
+      - zookeeper
+
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect:latest
+    hostname: kafka-connect
+    ports:
+        - "28083:28083"
+    healthcheck:
+      test: curl -f -m 3 http://localhost:28083/connectors || exit 1
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: kafka:29092
+      CONNECT_REST_PORT: 28083
+      CONNECT_GROUP_ID: "engagement-detection"
+      CONNECT_CONFIG_STORAGE_TOPIC: "connect-config"
+      CONNECT_OFFSET_STORAGE_TOPIC: "connect-offsets"
+      CONNECT_STATUS_STORAGE_TOPIC: "connect-status"
+      CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
+      CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.converters.ByteArrayConverter"
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
+      CONNECT_LOG4J_ROOT_LOGLEVEL: ERROR
+      TZ: "Europe/Berlin"
+    volumes:
+        - ./kafka-plugins:/usr/share/java/kafka-extra
+    depends_on:
+        - kafka
+        - kafka-connect-mqtt-builder
+
+  kafka-connect-mqtt-builder:
+    build: ./kafka-connect-mqtt
+    volumes:
+      - ./kafka-plugins:/jars
+
+# creates connectors on kafka-connect via REST API calls
+  connector-creator-acc: 
+    image: dwdraju/alpine-curl-jq
+    environment:
+      CONNECT_HOST: kafka-connect
+      CONNECT_PORT: 28083
+    depends_on: 
+      - kafka-connect
+    volumes:
+      - ./connector-creator/entrypoint.sh:/entry/entrypoint.sh
+      - ./connector-creator/mqtt.json:/data/config.json
+    command: /entry/entrypoint.sh

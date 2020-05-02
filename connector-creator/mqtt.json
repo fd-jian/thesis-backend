@@ -1,0 +1,19 @@
+{
+  "name": "mqtt",
+    "config": {
+      "connector.class": "com.evokly.kafka.connect.mqtt.MqttSourceConnector",
+      "mqtt.qos": "1",
+      "message_processor_class": "com.evokly.kafka.connect.mqtt.sample.DumbProcessor",
+      "tasks.max": "1",
+      "mqtt.topic": "#",
+      "mqtt.connection_timeout": "30",
+      "mqtt.keep_alive_interval": "60",
+      "mqtt.server_uris": "tcp://mosquitto:1883",
+      "mqtt.password": "null",
+      "name": "mqtt",
+      "kafka.topic": "mqtt",
+      "mqtt.user": "null",
+      "mqtt.clean_session": "true",
+      "mqtt.client_id": "null"
+    }
+}

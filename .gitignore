@@ -1,1 +1,4 @@
 /kafka-plugins
+/kafka/data
+/zookeeper/data
+/zookeeper/log

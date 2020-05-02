@@ -1,0 +1,3 @@
+[submodule "kafka-connect-mqtt"]
+	path = kafka-connect-mqtt
+	url = git@github.com:bratekarate/kafka-connect-mqtt.git
