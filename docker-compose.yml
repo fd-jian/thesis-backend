@@ -10,6 +10,8 @@ services:
   mqtt-client:
     image: efrecon/mqtt-client
     command: sub -h mosquitto -t "#" -v 
+    depends_on:
+      - mosquitto
 
   activity-detector:
     image: activity-detector
