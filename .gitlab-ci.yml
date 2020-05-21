@@ -21,4 +21,5 @@ deploy:
   tags:
     - docker
   script:
+    - git submodule update
     - docker-compose up -d --build
