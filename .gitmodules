@@ -1,6 +1,6 @@
 [submodule "activity-detector"]
 	path = activity-detector
-	url = ssh://git@gitlab.tba-hosting.de:47478/edutec/thriller/activity-detector.git
+	url = ../activity-detector.git
 [submodule "kafka-connect-mqtt"]
 	path = kafka-connect-mqtt
-	url = ssh://git@gitlab.tba-hosting.de:47478/edutec/thriller/kafka-connect-mqtt.git
+	url = ../kafka-connect-mqtt.git
