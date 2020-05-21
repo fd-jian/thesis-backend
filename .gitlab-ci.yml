@@ -1,7 +1,7 @@
 stages:
   - test
   #- build
-  #- deploy
+  - deploy
 
 #cache:
   #paths:
@@ -13,3 +13,12 @@ test:
     - docker
   script:
     - docker run --rm nginx:alpine echo "testing"
+
+deploy:
+  stage: deploy
+  only:
+    - master
+  tags:
+    - docker
+  script:
+    - docker-compose up -d --build
