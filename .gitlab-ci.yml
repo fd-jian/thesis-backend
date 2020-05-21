@@ -1,5 +1,5 @@
-#variables:
-  #GIT_SUBMODULE_STRATEGY: recursive
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
 
 stages:
   - test
@@ -23,9 +23,9 @@ deploy:
     - master
   tags:
     - docker
-  before_script:
-    - GIT_SSL_CAINFO=/etc/gitlab-runner/certs/ca_cert.crt git submodule sync --recursive
-    - GIT_SSL_CAINFO=/etc/gitlab-runner/certs/ca_cert.crt git submodule update --init --recursive
+  #before_script:
+    #- submodule sync --recursive
+    #- submodule update --init --recursive
   script:
     #- git lfs install
     #- git submodule init
