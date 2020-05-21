@@ -1,3 +1,6 @@
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
 stages:
   - test
   #- build
@@ -21,8 +24,8 @@ deploy:
   tags:
     - docker
   script:
-    - git lfs install
-    - git submodule init
-    - git submodule update
-    - git submodule status
+    #- git lfs install
+    #- git submodule init
+    #- git submodule update
+    #- git submodule status
     - docker-compose up -d --build
