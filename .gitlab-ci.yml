@@ -1,0 +1,15 @@
+stages:
+  - test
+  #- build
+  #- deploy
+
+#cache:
+  #paths:
+    #- build/
+
+test:
+  stage: test
+  tags:
+    - docker
+  script:
+    - docker run --rm nginx:alpine echo "testing"
