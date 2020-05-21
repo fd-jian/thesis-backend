@@ -21,5 +21,6 @@ deploy:
   tags:
     - docker
   script:
+    - git lfs install
     - git submodule update
     - docker-compose up -d --build
