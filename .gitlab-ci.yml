@@ -24,8 +24,8 @@ deploy:
   tags:
     - docker
   before_script:
-    - GIT_SSL_CAINFO=/etc/gitlab-runner/config/certs/ca_cert.crt git submodule sync --recursive
-    - GIT_SSL_CAINFO=/etc/gitlab-runner/config/certs/ca_cert.crt git submodule update --init --recursive
+    - GIT_SSL_CAINFO=/etc/gitlab-runner/certs/ca_cert.crt git submodule sync --recursive
+    - GIT_SSL_CAINFO=/etc/gitlab-runner/certs/ca_cert.crt git submodule update --init --recursive
   script:
     #- git lfs install
     #- git submodule init
