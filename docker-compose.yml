@@ -6,6 +6,9 @@ services:
     volumes:
       - /mosquitto/data
       - /mosquitto/log
+      - ./mosquitto/config:/mosquitto/config
+    ports:
+      - "1883:1883"
 
   mqtt-client:
     image: efrecon/mqtt-client
