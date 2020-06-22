@@ -1,19 +1,28 @@
 version: "3"
 services:
 
+  #flex-pc:
+  #jaytechlab.com:
   mosquitto:
     image: eclipse-mosquitto 
     volumes:
       - /mosquitto/data
       - /mosquitto/log
       - ./mosquitto/config:/mosquitto/config
+      - ./certs:/etc/mosquitto/certs
     ports:
-      - "1883:1883"
+      - "8883:8883"
 
   mqtt-client:
     image: efrecon/mqtt-client
-    command: sub -h mosquitto -t "#" -v 
+    #command: sub -h flex-pc --insecure -p 8883 --cafile /opt/certs/ca.crt -t "#" -v 
+    #command: sub -h jaytechlab.com -p 8883 --cafile /opt/certs/ca.crt -t "#" -v 
+    command: sub -h mosquitto -p 8883 --cafile /opt/certs/ca.crt -t "#" -v 
+    volumes:
+      - ./certs/ca.crt:/opt/certs/ca.crt
     depends_on:
+      #- flex-pc
+      #- jaytechlab.com
       - mosquitto
 
   activity-detector:
