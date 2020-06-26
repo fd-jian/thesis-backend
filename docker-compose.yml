@@ -67,13 +67,24 @@ services:
     depends_on:
       - zookeeper
 
+  schema-registry:
+    image: confluentinc/cp-schema-registry:5.5.0
+    hostname: schema-registry
+    container_name: schema-registry
+    depends_on:
+      - zookeeper
+      #- broker
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
+
   kafka-connect:
     image: confluentinc/cp-kafka-connect:latest
     hostname: kafka-connect
     ports:
         - "28083:28083"
-    healthcheck:
-      test: curl -f -m 3 http://localhost:28083/connectors || exit 1
     environment:
       CONNECT_BOOTSTRAP_SERVERS: kafka:29092
       CONNECT_REST_PORT: 28083
