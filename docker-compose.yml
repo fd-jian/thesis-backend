@@ -91,6 +91,7 @@ services:
       TZ: "Europe/Berlin"
     volumes:
         - ./kafka-plugins:/usr/share/java/kafka-extra
+        - ./certs:/etc/kafka/certs
     depends_on:
         - kafka
         - kafka-connect-mqtt-lib
