@@ -8,8 +8,8 @@ services:
     volumes:
       - /mosquitto/data
       - /mosquitto/log
-      - ./mosquitto/config:/mosquitto/config
-      - ./certs:/etc/mosquitto/certs
+      - ./mosquitto/config:/mosquitto/config:ro
+      - ./certs:/etc/mosquitto/certs:ro
     ports:
       - "8883:8883"
 
@@ -19,7 +19,7 @@ services:
     #command: sub -h jaytechlab.com -p 8883 --cafile /opt/certs/ca.crt -t "#" -v 
     command: sub -h mosquitto -p 8883 --cafile /opt/certs/ca.crt -t "#" -v 
     volumes:
-      - ./certs/ca.crt:/opt/certs/ca.crt
+      - ./certs/ca.crt:/opt/certs/ca.crt:ro
     depends_on:
       #- flex-pc
       #- jaytechlab.com
@@ -73,7 +73,7 @@ services:
     container_name: schema-registry
     depends_on:
       - zookeeper
-      #- broker
+      - kafka
     ports:
       - "8081:8081"
     environment:
@@ -93,7 +93,11 @@ services:
       CONNECT_OFFSET_STORAGE_TOPIC: "connect-offsets"
       CONNECT_STATUS_STORAGE_TOPIC: "connect-status"
       CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
-      CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.converters.ByteArrayConverter"
+      #CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.converters.ByteArrayConverter"
+      #CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      #CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_VALUE_CONVERTER: "io.confluent.connect.avro.AvroConverter"
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
       CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
       CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
       CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
@@ -101,8 +105,9 @@ services:
       CONNECT_LOG4J_ROOT_LOGLEVEL: ERROR
       TZ: "Europe/Berlin"
     volumes:
-        - ./kafka-plugins:/usr/share/java/kafka-extra
-        - ./certs:/etc/kafka/certs
+        - kafka-plugins:/usr/share/java/kafka-extra
+        - ./kafka/avro:/etc/kafka/avro:ro
+        - ./certs/ca.crt:/etc/kafka/certs/ca.crt:ro
     depends_on:
         - kafka
         - kafka-connect-mqtt-lib
@@ -111,17 +116,19 @@ services:
     image: kafka-connect-mqtt-lib
     build: ./kafka-connect-mqtt
     volumes:
-      - ./kafka-plugins:/jars
+      - kafka-plugins:/jars
 
 # creates connectors on kafka-connect via REST API calls
-  connector-creator-acc: 
-    image: dwdraju/alpine-curl-jq
+  connector-creator: 
+    image: connector-creator
+    build: connector-creator
     environment:
       CONNECT_HOST: kafka-connect
       CONNECT_PORT: 28083
     depends_on: 
       - kafka-connect
     volumes:
-      - ./connector-creator/entrypoint.sh:/entry/entrypoint.sh
-      - ./connector-creator/mqtt.json:/data/config.json
-    command: /entry/entrypoint.sh
+      - ./kafka/connectors:/data:ro
+
+volumes:
+  kafka-plugins:

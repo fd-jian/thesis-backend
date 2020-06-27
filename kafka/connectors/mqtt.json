@@ -3,7 +3,8 @@
     "config": {
       "connector.class": "com.evokly.kafka.connect.mqtt.MqttSourceConnector",
       "mqtt.qos": "1",
-      "message_processor_class": "com.evokly.kafka.connect.mqtt.sample.DumbProcessor",
+      "message_processor.class": "com.evokly.kafka.connect.mqtt.sample.AvroProcessor",
+      "avro.schema.directory": "/etc/kafka/avro",
       "tasks.max": "1",
       "mqtt.topic": "#",
       "mqtt.connection_timeout": "30",

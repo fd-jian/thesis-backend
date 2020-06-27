@@ -1,0 +1,11 @@
+{
+  "namespace": "com.edutec.activitydetector.model",
+    "type": "record",
+    "name": "AccelerometerRecord",
+    "fields": [
+      {"name": "time", "type": "long"},
+      {"name": "x",  "type": "float"},
+      {"name": "y",  "type": "float"},
+      {"name": "z",  "type": "float"}
+    ]
+}
