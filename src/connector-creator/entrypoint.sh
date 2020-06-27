@@ -32,6 +32,7 @@ find /data/connectors ! -path /data/connectors -prune -type f -name "*.json" |
 
                 echo "Waiting for rest endpoint at $REGISTRY_URL"
                 SUBJECTS_URL="$REGISTRY_URL/subjects"
+                echo $SUBJECTS_URL
                 until curl -sf -m 1 $SUBJECTS_URL > /dev/null; do
                     printf "."
                     sleep 2
@@ -44,8 +45,8 @@ find /data/connectors ! -path /data/connectors -prune -type f -name "*.json" |
                 for TYPE in key value; do
 
                     SUBJECT_NAME="$KAFKA_TOPIC-$TYPE"
-                    curl -sfS "$SUBJECTS_URL/$SUBJECT_NAME/versions" > /dev/null &&
-                        echo "Subject '$SUBJECT_NAME' already exists."
+                    curl -sf "$SUBJECTS_URL/$SUBJECT_NAME/versions" > /dev/null &&
+                        echo "Subject '$SUBJECT_NAME' already exists." &&
                         continue
 
                     export T="$([ "$TYPE" = "value" ] && echo 'values/' || echo '')"
