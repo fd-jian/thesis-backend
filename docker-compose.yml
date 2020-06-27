@@ -1,8 +1,6 @@
 version: "3"
 services:
 
-  #flex-pc:
-  #jaytechlab.com:
   mosquitto:
     image: eclipse-mosquitto 
     volumes:
@@ -15,14 +13,10 @@ services:
 
   mqtt-client:
     image: efrecon/mqtt-client
-    #command: sub -h flex-pc --insecure -p 8883 --cafile /opt/certs/ca.crt -t "#" -v 
-    #command: sub -h jaytechlab.com -p 8883 --cafile /opt/certs/ca.crt -t "#" -v 
     command: sub -h mosquitto -p 8883 --cafile /opt/certs/ca.crt -t "#" -v 
     volumes:
       - ./certs/ca.crt:/opt/certs/ca.crt:ro
     depends_on:
-      #- flex-pc
-      #- jaytechlab.com
       - mosquitto
 
   activity-detector:
@@ -93,9 +87,6 @@ services:
       CONNECT_OFFSET_STORAGE_TOPIC: "connect-offsets"
       CONNECT_STATUS_STORAGE_TOPIC: "connect-status"
       CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
-      #CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.converters.ByteArrayConverter"
-      #CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
-      #CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
       CONNECT_VALUE_CONVERTER: "io.confluent.connect.avro.AvroConverter"
       CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
       CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
@@ -112,13 +103,14 @@ services:
         - kafka
         - kafka-connect-mqtt-lib
 
+  # copies contained connect jars from build to kafka-plugin volume and shuts down
   kafka-connect-mqtt-lib:
     image: kafka-connect-mqtt-lib
     build: ./kafka-connect-mqtt
     volumes:
       - kafka-plugins:/jars
 
-# creates connectors on kafka-connect via REST API calls
+  # creates connectors on kafka-connect via REST API calls and shuts down
   connector-creator: 
     image: connector-creator
     build: connector-creator
