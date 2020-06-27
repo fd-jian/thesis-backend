@@ -1,10 +1,10 @@
 {
-  "name": "mqtt",
+    "name": "mqtt-accelerometer",
     "config": {
       "connector.class": "com.evokly.kafka.connect.mqtt.MqttSourceConnector",
       "mqtt.qos": "1",
       "message_processor.class": "com.evokly.kafka.connect.mqtt.sample.AvroProcessor",
-      "avro.schema.directory": "/etc/kafka/avro",
+      "avro.schema.registry.url": "http://schema-registry:8081",
       "tasks.max": "1",
       "mqtt.topic": "#",
       "mqtt.connection_timeout": "30",
@@ -12,8 +12,7 @@
       "mqtt.server_uris": "ssl://mosquitto:8883",
       "mqtt.password": "null",
       "mqtt.ssl.ca_cert": "/etc/kafka/certs/ca.crt",
-      "name": "mqtt",
-      "kafka.topic": "mqtt",
+      "kafka.topic": "accelerometer",
       "mqtt.user": "null",
       "mqtt.clean_session": "true",
       "mqtt.client_id": "null"

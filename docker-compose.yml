@@ -21,7 +21,7 @@ services:
 
   activity-detector:
     image: activity-detector
-    build: ./activity-detector
+    build: ./src/activity-detector
     depends_on:
       - kafka
     environment:
@@ -97,7 +97,6 @@ services:
       TZ: "Europe/Berlin"
     volumes:
         - kafka-plugins:/usr/share/java/kafka-extra
-        - ./kafka/avro:/etc/kafka/avro:ro
         - ./certs/ca.crt:/etc/kafka/certs/ca.crt:ro
     depends_on:
         - kafka
@@ -106,21 +105,24 @@ services:
   # copies contained connect jars from build to kafka-plugin volume and shuts down
   kafka-connect-mqtt-lib:
     image: kafka-connect-mqtt-lib
-    build: ./kafka-connect-mqtt
+    build: ./src/kafka-connect-mqtt
     volumes:
       - kafka-plugins:/jars
 
   # creates connectors on kafka-connect via REST API calls and shuts down
   connector-creator: 
     image: connector-creator
-    build: connector-creator
+    build: ./src/connector-creator
     environment:
       CONNECT_HOST: kafka-connect
       CONNECT_PORT: 28083
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
     depends_on: 
       - kafka-connect
     volumes:
-      - ./kafka/connectors:/data:ro
+      - ./kafka/connect-mqtt/connectors:/data/connectors:ro
+      - ./kafka/connect-mqtt/avro:/data/avro:ro
+      #- ./activity-detector/src/main/avro/values/accelerometer.avsc:/data/schemas/mqtt-accelerometer.avsc:ro
 
 volumes:
   kafka-plugins:

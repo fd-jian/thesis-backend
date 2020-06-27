@@ -1,6 +1,0 @@
-[submodule "activity-detector"]
-	path = activity-detector
-	url = ../activity-detector.git
-[submodule "kafka-connect-mqtt"]
-	path = kafka-connect-mqtt
-	url = ../kafka-connect-mqtt.git
