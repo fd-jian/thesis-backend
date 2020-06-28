@@ -2,10 +2,10 @@
 
 ERR='Error: Missing $PARAM parameter'
 
-[ -z "$CONNECT_HOST" ] && CONNECT_HOST="$1" && 
+[ -z "$CONNECT_HOST" ] && CONNECT_HOST="$1" &&
     [ -z "$CONNECT_HOST" ] && { echo $ERR | PARAM="host" envsubst; exit 1; }
 
-[ -z "$CONNECT_PORT" ] && CONNECT_PORT="$2" && 
+[ -z "$CONNECT_PORT" ] && CONNECT_PORT="$2" &&
     [ -z "$CONNECT_PORT" ] && { echo $ERR | PARAM="port" envsubst; exit 1; }
 
 echo "Waiting for rest endpoint at $CONNECT_HOST:$CONNECT_PORT"
@@ -15,19 +15,21 @@ until RE="$(curl -sf -m 1 "http://$CONNECT_HOST:$CONNECT_PORT/connectors")"; do
 done
 echo
 
-find /data/connectors ! -path /data/connectors -prune -type f -name "*.json" | 
+find /data/connectors ! -path /data/connectors -prune -type f -name "*.json" |
     while read JSON_CONFIG; do
 
         CONNECT_NAME="$(jq -r '.name' "$JSON_CONFIG")"
-        IS_MQTT="$(jq -r '.config."connector.class"' "$JSON_CONFIG" | 
-            grep -q "com.evokly.kafka.connect.mqtt.MqttSourceConnector" && 
+        IS_MQTT_AVRO="$(jq -r '.config."connector.class"' "$JSON_CONFIG" |
+            grep -q "com.evokly.kafka.connect.mqtt.MqttSourceConnector" &&
+            jq -r '.config."message_processor.class"' "$JSON_CONFIG" |
+            grep -q "com.evokly.kafka.connect.mqtt.sample.AvroProcessor" &&
             echo 1 || echo '')"
 
-        test -z "$IS_MQTT" || 
+        test -z "$IS_MQTT_AVRO" ||
             {
                 REGISTRY_URL="$CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL"
-                [ -z "$REGISTRY_URL" ] && REGISTRY_URL="$3" && 
-                    [ -z "$REGISTRY_URL" ] && 
+                [ -z "$REGISTRY_URL" ] && REGISTRY_URL="$3" &&
+                    [ -z "$REGISTRY_URL" ] &&
                     { echo $ERR | PARAM="host" envsubst; exit 1; }
 
                 echo "Waiting for rest endpoint at $REGISTRY_URL"
@@ -52,17 +54,17 @@ find /data/connectors ! -path /data/connectors -prune -type f -name "*.json" |
                     export T="$([ "$TYPE" = "value" ] && echo 'values/' || echo '')"
                     SCHEMA_FILE="$(echo $FILENAME_TEMPL | FILE="$CONNECT_NAME"  envsubst)"
                     SCHEMA_FILE="$(test -f \
-                        "$SCHEMA_FILE" && 
-                        echo $SCHEMA_FILE || 
+                        "$SCHEMA_FILE" &&
+                        echo $SCHEMA_FILE ||
                         echo $(echo $FILENAME_TEMPL | FILE="$(basename "$JSON_CONFIG")" envsubst))"
                     SCHEMA_FILE="$(test -f \
-                        "$SCHEMA_FILE" && 
-                        echo $SCHEMA_FILE || 
+                        "$SCHEMA_FILE" &&
+                        echo $SCHEMA_FILE ||
                         echo $(echo $FILENAME_TEMPL | FILE="$KAFKA_TOPIC" envsubst))"
 
-                    test -f "$SCHEMA_FILE" || 
+                    test -f "$SCHEMA_FILE" ||
                         {
-                            echo "schema file not found:'$SCHEMA_FILE'" 
+                            echo "schema file not found:'$SCHEMA_FILE'"
                             [ "$TYPE" = "value" ] && VAL_ERR=1
                             continue
                         }
@@ -73,7 +75,7 @@ find /data/connectors ! -path /data/connectors -prune -type f -name "*.json" |
                         --data "{\"schema\":$(jq --compact-output '' "$SCHEMA_FILE" | jq --raw-input '')}" \
                         "$SUBJECTS_URL/$SUBJECT_NAME/versions" > /dev/null &&
                         printf "\nSuccesfully pushed subject '$SUBJECT_NAME' to registry.\n" ||
-                        echo "Error pushing schema to registry." && 
+                        echo "Error pushing schema to registry." &&
                         [ "$TYPE" = "value" ] && VAL_ERR=1
 
                     done
@@ -82,7 +84,7 @@ find /data/connectors ! -path /data/connectors -prune -type f -name "*.json" |
             test -z "$VAL_ERR" || continue
 
             ! echo "$RE" | jq -e "index(\"$CONNECT_NAME\") and true or false" > /dev/null && {
-                echo "Connector '$CONNECT_NAME' not running." && 
+                echo "Connector '$CONNECT_NAME' not running." &&
                 {
                     echo " Creating connector '$CONNECT_NAME' via REST API." &&
                         curl -sfSX POST \
