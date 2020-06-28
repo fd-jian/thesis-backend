@@ -75,8 +75,10 @@ find /data/connectors ! -path /data/connectors -prune -type f -name "*.json" |
                         --data "{\"schema\":$(jq --compact-output '' "$SCHEMA_FILE" | jq --raw-input '')}" \
                         "$SUBJECTS_URL/$SUBJECT_NAME/versions" > /dev/null &&
                         printf "\nSuccesfully pushed subject '$SUBJECT_NAME' to registry.\n" ||
-                        echo "Error pushing schema to registry." &&
-                        [ "$TYPE" = "value" ] && VAL_ERR=1
+                        {
+                            echo "Error pushing schema to registry."
+                            [ "$TYPE" = "value" ] && VAL_ERR=1
+                        }
 
                     done
                 }
