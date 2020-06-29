@@ -47,7 +47,6 @@ find /data/connectors ! -path /data/connectors -prune -type f -name "*.json" |
 
                     export T="$([ "$TYPE" = "value" ] && echo 'values/' || echo '')"
                     SCHEMA_FILE="$(echo $FILENAME_TEMPL | FILE="$CONNECT_NAME-$TYPE"  envsubst)"
-                    echo $SCHEMA_FILE
                     SCHEMA_FILE="$(test -f \
                         "$SCHEMA_FILE" &&
                         echo $SCHEMA_FILE ||
@@ -77,28 +76,23 @@ find /data/connectors ! -path /data/connectors -prune -type f -name "*.json" |
 
             test -z "$VAL_ERR" || continue
 
-            ! echo "$RE" | jq -e "index(\"$CONNECT_NAME\") and true or false" > /dev/null && {
-                echo "Connector '$CONNECT_NAME' not running." &&
+            echo "$RE" | jq -e "index(\"$CONNECT_NAME\") and true or false" > /dev/null &&
                 {
-                    echo " Creating connector '$CONNECT_NAME' via REST API." &&
-                        curl -sfSX POST \
-                        -H "Content-Type: application/json" \
-                        --data-binary "@$JSON_CONFIG" \
-                        "http://$CONNECT_HOST:$CONNECT_PORT/connectors" &&
-                        printf "\nSuccesfully created Connector '$CONNECT_NAME'.\n" ||
-                        echo "Error creating connector '$CONNECT_NAME'"
-                    }
-
-            } || 
-                {
-                    # TODO: check if restart actually works, if schema gets reloaded
-                    echo "Connector '$CONNECT_NAME' is already running. restarting." &&
-                        curl -X POST \
-                        -H "Content-Type: application/json" \
-                        "http://$CONNECT_HOST:$CONNECT_PORT/connectors/$CONNECT_NAME/restart"
-                        #printf "\nSuccesfully restarted connector '$CONNECT_NAME'.\n" ||
-                        #echo "Error restarted connector '$CONNECT_NAME'"
+                    echo "Connector '$CONNECT_NAME' is already running. deleting (restart)." &&
+                        curl -sfSX DELETE \
+                        "http://$CONNECT_HOST:$CONNECT_PORT/connectors/$CONNECT_NAME" &&
+                        printf "\nSuccesfully deleted connector '$CONNECT_NAME'.\n" ||
+                        echo "Error deleting connector '$CONNECT_NAME'"
                 }
+
+            echo " Creating connector '$CONNECT_NAME' via REST API." &&
+                curl -sfSX POST \
+                -H "Content-Type: application/json" \
+                --data-binary "@$JSON_CONFIG" \
+                "http://$CONNECT_HOST:$CONNECT_PORT/connectors" &&
+                printf "\nSuccesfully created Connector '$CONNECT_NAME'.\n" ||
+                echo "Error creating connector '$CONNECT_NAME'"
+
     done
 
 
