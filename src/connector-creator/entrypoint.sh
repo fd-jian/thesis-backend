@@ -34,7 +34,6 @@ find /data/connectors ! -path /data/connectors -prune -type f -name "*.json" |
 
                 echo "Waiting for rest endpoint at $REGISTRY_URL"
                 SUBJECTS_URL="$REGISTRY_URL/subjects"
-                echo $SUBJECTS_URL
                 until curl -sf -m 1 $SUBJECTS_URL > /dev/null; do
                     printf "."
                     sleep 2
@@ -43,16 +42,12 @@ find /data/connectors ! -path /data/connectors -prune -type f -name "*.json" |
 
                 KAFKA_TOPIC="$(jq -r '.config."kafka.topic"' "$JSON_CONFIG")"
 
-                FILENAME_TEMPL="/data/avro/\$T\$FILE.avsc"
+                FILENAME_TEMPL="/data/auto-schemas/\$T\$FILE.avsc"
                 for TYPE in key value; do
 
-                    SUBJECT_NAME="mqtt-$KAFKA_TOPIC-$TYPE"
-                    curl -sf "$SUBJECTS_URL/$SUBJECT_NAME/versions" > /dev/null &&
-                        echo "Subject '$SUBJECT_NAME' already exists." &&
-                        continue
-
                     export T="$([ "$TYPE" = "value" ] && echo 'values/' || echo '')"
-                    SCHEMA_FILE="$(echo $FILENAME_TEMPL | FILE="$CONNECT_NAME"  envsubst)"
+                    SCHEMA_FILE="$(echo $FILENAME_TEMPL | FILE="$CONNECT_NAME-$TYPE"  envsubst)"
+                    echo $SCHEMA_FILE
                     SCHEMA_FILE="$(test -f \
                         "$SCHEMA_FILE" &&
                         echo $SCHEMA_FILE ||
@@ -60,12 +55,13 @@ find /data/connectors ! -path /data/connectors -prune -type f -name "*.json" |
 
                     test -f "$SCHEMA_FILE" ||
                         {
-                            echo "No schema file found for '$KAFKA_TOPIC' and type '$TYPE'. Ignoring"
+                            echo "No schema file found for '$CONNECT_NAME' and type '$TYPE'. Ignoring"
                             [ "$TYPE" = "value" ] && VAL_ERR=1
                             continue
                         }
 
                     echo "Pushing schema to registry." &&
+                    SUBJECT_NAME="mqtt-$KAFKA_TOPIC-$TYPE"
                     curl -sfSX POST \
                         -H "Content-Type: application/vnd.schemaregistry.v1+json" \
                         --data "{\"schema\":$(jq --compact-output '' "$SCHEMA_FILE" | jq --raw-input '')}" \
@@ -90,10 +86,19 @@ find /data/connectors ! -path /data/connectors -prune -type f -name "*.json" |
                         --data-binary "@$JSON_CONFIG" \
                         "http://$CONNECT_HOST:$CONNECT_PORT/connectors" &&
                         printf "\nSuccesfully created Connector '$CONNECT_NAME'.\n" ||
-                        echo "Error creating connector '$CONNECT_NAME'" ;
+                        echo "Error creating connector '$CONNECT_NAME'"
                     }
 
-            } || echo "Connector '$CONNECT_NAME' is already running"
+            } || 
+                {
+                    # TODO: check if restart actually works, if schema gets reloaded
+                    echo "Connector '$CONNECT_NAME' is already running. restarting." &&
+                        curl -X POST \
+                        -H "Content-Type: application/json" \
+                        "http://$CONNECT_HOST:$CONNECT_PORT/connectors/$CONNECT_NAME/restart"
+                        #printf "\nSuccesfully restarted connector '$CONNECT_NAME'.\n" ||
+                        #echo "Error restarted connector '$CONNECT_NAME'"
+                }
     done
 
 

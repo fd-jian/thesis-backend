@@ -123,7 +123,7 @@ services:
       - kafka-connect
     volumes:
       - ./kafka/connect-mqtt/connectors:/data/connectors:ro
-      - ./kafka/connect-mqtt/avro:/data/avro:ro
+      - ./kafka/connect-mqtt/auto-schemas:/data/auto-schemas:ro
       #- ./activity-detector/src/main/avro/values/accelerometer.avsc:/data/schemas/mqtt-accelerometer.avsc:ro
 
 volumes:
