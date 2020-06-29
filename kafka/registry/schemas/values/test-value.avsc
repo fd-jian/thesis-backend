@@ -1,0 +1,12 @@
+{
+  "namespace": "com.edutec.activitydetector.model",
+    "type": "record",
+    "name": "TestusSchmidt",
+    "fields": [
+      {"name": "test", "type": "long"},
+      {"name": "sy",  "type": "float"},
+      {"name": "zz",  "type": "bytes"},
+      {"name": "af",  "type": "boolean"},
+      {"name": "ab",  "type": "string"}
+    ]
+}

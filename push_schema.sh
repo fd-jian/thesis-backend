@@ -1,10 +1,10 @@
 #!/bin/sh
 
-## Simple script to push one or multiple files or all files 
+## Simple script to push one or multiple files or all files
 ## in all subdirectories to the local schema registry with
 ## default port recursively.
-## 
-## If URL is not specified, a hardcoded default URL will 
+##
+## If URL is not specified, a hardcoded default URL will
 ## be used.
 ##
 ## Usage: push_schema.sh [URL|-] [FILE|DIRECTORY]...
@@ -21,10 +21,14 @@ push_file() {
         curl -sfSX POST \
         -H "Content-Type: application/vnd.schemaregistry.v1+json" \
         --data "{\"schema\":$(jq --compact-output '' "$1" | jq --raw-input '')}" \
-        "$SUBJECTS_URL/$SUBJECT_NAME/versions" #&&
+        "$SUBJECTS_URL/$SUBJECT_NAME/versions" &&
         printf "\nSuccesfully pushed schema for subject '$SUBJECT_NAME' to registry.\n" ||
         printf "\nError pushing schema for subject '$SUBJECT_NAME' to registry.\n"
 }
+
+[ $# -lt "1" ] &&
+    echo "Missing argument" >&2 &&
+    exit 1
 
 for FILEPATH in "$@"; do
     if test -d "$FILEPATH"; then
