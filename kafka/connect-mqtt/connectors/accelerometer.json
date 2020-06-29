@@ -2,9 +2,8 @@
     "name": "mqtt-accelerometer",
     "config": {
       "connector.class": "com.evokly.kafka.connect.mqtt.MqttSourceConnector",
+      "processing.message_processor": "com.evokly.kafka.connect.mqtt.sample.AvroProcessor",
       "mqtt.qos": "1",
-      "message_processor.class": "com.evokly.kafka.connect.mqtt.sample.AvroProcessor",
-      "avro.schema.registry.url": "http://schema-registry:8081",
       "tasks.max": "1",
       "mqtt.topic": "#",
       "mqtt.connection_timeout": "30",

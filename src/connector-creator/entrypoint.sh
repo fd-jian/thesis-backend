@@ -21,7 +21,7 @@ find /data/connectors ! -path /data/connectors -prune -type f -name "*.json" |
         CONNECT_NAME="$(jq -r '.name' "$JSON_CONFIG")"
         IS_MQTT_AVRO="$(jq -r '.config."connector.class"' "$JSON_CONFIG" |
             grep -q "com.evokly.kafka.connect.mqtt.MqttSourceConnector" &&
-            jq -r '.config."message_processor.class"' "$JSON_CONFIG" |
+            jq -r '.config."processing.message_processor"' "$JSON_CONFIG" |
             grep -q "com.evokly.kafka.connect.mqtt.sample.AvroProcessor" &&
             echo 1 || echo '')"
 
@@ -46,7 +46,7 @@ find /data/connectors ! -path /data/connectors -prune -type f -name "*.json" |
                 FILENAME_TEMPL="/data/avro/\$T\$FILE.avsc"
                 for TYPE in key value; do
 
-                    SUBJECT_NAME="$KAFKA_TOPIC-$TYPE"
+                    SUBJECT_NAME="mqtt-$KAFKA_TOPIC-$TYPE"
                     curl -sf "$SUBJECTS_URL/$SUBJECT_NAME/versions" > /dev/null &&
                         echo "Subject '$SUBJECT_NAME' already exists." &&
                         continue
@@ -64,7 +64,7 @@ find /data/connectors ! -path /data/connectors -prune -type f -name "*.json" |
 
                     test -f "$SCHEMA_FILE" ||
                         {
-                            echo "schema file not found:'$SCHEMA_FILE'"
+                            echo "No schema file found for '$KAFKA_TOPIC' and type '$TYPE'. Ignoring"
                             [ "$TYPE" = "value" ] && VAL_ERR=1
                             continue
                         }

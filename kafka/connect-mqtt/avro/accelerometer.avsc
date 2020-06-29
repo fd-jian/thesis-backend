@@ -1,8 +1,1 @@
-{
-  "namespace": "com.edutec.activitydetector.model",
-    "type": "record",
-    "name": "SessionIdKey",
-    "fields": [
-      {"name": "sessionId", "type": "string"}
-    ]
-}
+{"type": "string"}
