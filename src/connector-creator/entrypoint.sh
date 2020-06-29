@@ -56,11 +56,7 @@ find /data/connectors ! -path /data/connectors -prune -type f -name "*.json" |
                     SCHEMA_FILE="$(test -f \
                         "$SCHEMA_FILE" &&
                         echo $SCHEMA_FILE ||
-                        echo $(echo $FILENAME_TEMPL | FILE="$(basename "$JSON_CONFIG")" envsubst))"
-                    SCHEMA_FILE="$(test -f \
-                        "$SCHEMA_FILE" &&
-                        echo $SCHEMA_FILE ||
-                        echo $(echo $FILENAME_TEMPL | FILE="$KAFKA_TOPIC" envsubst))"
+                        echo $(echo $FILENAME_TEMPL | FILE="$(basename "$JSON_CONFIG-$TYPE")" envsubst))"
 
                     test -f "$SCHEMA_FILE" ||
                         {
