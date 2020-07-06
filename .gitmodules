@@ -4,3 +4,6 @@
 [submodule "src/kafka-connect-mqtt"]
 	path = src/kafka-connect-mqtt
 	url = ../kafka-connect-mqtt.git
+[submodule "src/indicator-service"]
+	path = src/indicator-service
+	url = ../indicator-service.git
