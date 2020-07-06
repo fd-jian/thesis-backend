@@ -19,6 +19,22 @@ services:
     depends_on:
       - mosquitto
 
+  proxy:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./proxy/conf/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./proxy/conf/conf.d:/etc/nginx/conf.d:ro
+      - ./proxy/html:/usr/share/nginx/html
+
+  js-client:
+    image: nginx:alpine
+    volumes:
+      - ./js-client/html:/usr/share/nginx/html
+      - ./js-client/conf/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./js-client/conf/conf.d:/etc/nginx/conf.d:ro
+
   websocket:
     image: kafka-websocket-client
     #build: ./src/activity-detector
