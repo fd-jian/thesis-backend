@@ -19,6 +19,18 @@ services:
     depends_on:
       - mosquitto
 
+  websocket:
+    image: kafka-websocket-client
+    #build: ./src/activity-detector
+    depends_on:
+      - kafka
+    environment:
+      SPRING_PROFILES_ACTIVE: snapshot
+      TZ: "Europe/Berlin"
+    ports:
+      - "8002:8000"
+      - "8080:8080"
+
   activity-detector:
     image: activity-detector
     build: ./src/activity-detector
