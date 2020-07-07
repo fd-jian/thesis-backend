@@ -27,6 +27,9 @@ services:
       - ./proxy/conf/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./proxy/conf/conf.d:/etc/nginx/conf.d:ro
       - ./proxy/html:/usr/share/nginx/html
+    depends_on:
+      - indicator-service
+      - indicator-ui
 
   indicator-ui:
     image: nginx:alpine
