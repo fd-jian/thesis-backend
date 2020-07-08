@@ -32,8 +32,9 @@ window.onload = function() {
 
   const btn = document.createElement("BUTTON");
   btn.id = 'btn-connect'
-  btn.innerHTML = "CONNECT";
+  btn.textContent = "CONNECT";
   document.getElementById("buttons").appendChild(btn);
+  btn.disabled = true;
   btn.onclick = function () {
     console.log("connect btn")
     connect();
@@ -41,7 +42,8 @@ window.onload = function() {
 
   const disc = document.createElement("BUTTON");
   disc.id = 'btn-disconnect'
-  disc.innerHTML = "DISCONNECT";
+  disc.textContent = "DISCONNECT";
+  disc.disabled = true;
   document.getElementById("buttons").appendChild(disc);
   disc.onclick = function () {
     console.log("disconnect btn")
@@ -49,14 +51,18 @@ window.onload = function() {
   }
 
   const pause = document.createElement("BUTTON");
-  pause.innerHTML = "PAUSE GRAPH";
+  pause.id = 'btn-pause'
+  pause.textContent = "PAUSE GRAPH";
+  pause.disabled = true;
   document.getElementById("buttons").appendChild(pause);
   pause.onclick = function () {
     clearGraphIntervals();
   }
 
   const resume = document.createElement("BUTTON");
-  resume.innerHTML = "RESUME GRAPH";
+  resume.id = 'btn-resume'
+  resume.textContent = "RESUME GRAPH";
+  resume.disabled = true;
   document.getElementById("buttons").appendChild(resume);
   resume.onclick = function () {
     setGraphIntervals();
@@ -70,9 +76,9 @@ window.onload = function() {
 
 }
 
-document.addEventListener('keypress', function(e) {
+window.addEventListener('keypress', function(e) {
   switch(e.keyCode) {
-    case 32:  // SPACE
+    case 32:  // space/spacebar
       e.preventDefault();
       toggleGraphIntervals();
   }
@@ -92,6 +98,11 @@ function connect() {
       handleAccelerometer(JSON.parse(record.body));
     });
   });
+  socket.onclose = function () {
+    console.log("connection closed, reconnecting in 3s");
+    setConnected(false);
+    setTimeout(connect, 3000);
+  }
 }
 
 function handleAccelerometer(record) {
@@ -121,32 +132,59 @@ function setConnected(conn) {
   connected = conn;
   const btnCon = document.getElementById("btn-connect");
   const btnDisc = document.getElementById("btn-disconnect");
+  const btnPs = document.getElementById("btn-pause");
+  const btnRes = document.getElementById("btn-resume");
 
   if(conn) {
     btnCon.disabled = true;
-    btnCon.classList.add("disabled")
     btnDisc.disabled = false;
-    btnDisc.classList.remove("disabled")
+    refreshPauseBtns();
   } else {
     btnCon.disabled = false;
-    btnCon.classList.remove("disabled")
     btnDisc.disabled = true;
-    btnDisc.classList.add("disabled")
+    btnPs.disabled = true;
+    btnRes.disabled = true;
   }
 
 }
 
+function refreshPauseBtns() {
+    const btnPs = document.getElementById("btn-pause");
+    const btnRes = document.getElementById("btn-resume");
+
+    if(!btnPs || !btnRes) {
+      return false;
+    }
+
+    if(isRunning) {
+      btnRes.disabled = true;
+      btnPs.disabled = false;
+    } else {
+      btnRes.disabled = false;
+      btnPs.disabled = true;
+    }
+
+}
+
 function clearGraphIntervals() {
+  if(!isRunning) {
+    return false;
+  }
   isRunning = false;
   clearInterval(accInterval);
   clearInterval(statsInterval);
+  refreshPauseBtns();
   console.log("pause graph");
 }
 
 function setGraphIntervals() {
+  if(isRunning) {
+    return false;
+  }
   isRunning = true;
   accInterval = setInterval(refreshAccGraph, ACC_INTERVAL);
   statsInterval = setInterval(refreshStatsGraph, STATS_INTERVAL);
+  refreshPauseBtns();
   console.log("resume graph");
 }
 
@@ -255,14 +293,32 @@ function createAcceleroChartCfg() {
         label: 'x',
         data: [ ],
         backgroundColor: [
-          'rgba(255, 206, 86, 0.6)'
+            //'rgba(255, 206, 86, 0.6)', // okra
+          //'rgba(244, 162, 97, 0.6)', // orange
+          //'rgba(252, 186, 4, 0.6)', // yellow
+          //'rgba(255, 186, 8, 0.6)', // yellow other
+          //'rgba(255, 233, 0, 0.6)', // yellow bright
+          'rgba(255, 255, 0, 0.6)' // yellow ela
+        ]
+      },
+        {
+        label: 'y',
+        data: [ ],
+        backgroundColor: [
+          //'rgba(64, 249, 155, 0.6)' // green
+          //'rgba(0, 255, 0, 0.6)' // green flex
+          //'rgba(186, 39, 74, 0.6)'  // red
+          //'rgba(255, 0, 175, 0.6)' // fashion fuchsia pink
+          //'rgba(255, 0, 112, 0.6)' // winter sky magenta
+          'rgba(255, 0, 181, 0.6)' // shocking pink
         ]
       },
         {
           label: 'z',
           data: [ ],
           backgroundColor: [
-            'rgba(75, 192, 192, 0.6)',
+            //'rgba(75, 192, 192, 0.6)', // light blue
+            'rgba(0, 152, 255, 0.6)', // indigo lulu
           ]
         }
       ]
