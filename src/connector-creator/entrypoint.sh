@@ -44,8 +44,7 @@ find /data/connectors ! -path /data/connectors \
                 done
                 echo
 
-                KAFKA_TOPIC="$(jq -r '.config."kafka.topic"' "$JSON_CONFIG")"
-
+                KAFKA_TOPIC="$(jq -r 'if .config | has("kafka.topic") then .config."kafka.topic" elif .config | has("processing.kafka_schema_subject") then .config."processing.kafka_schema_subject" else "" end' "$JSON_CONFIG" | sed 's/^\(.\)/-\1/g')"
                 FILENAME_TEMPL="/data/auto-schemas/\$T\$FILE.avsc"
                 for TYPE in key value; do
 
@@ -65,7 +64,7 @@ find /data/connectors ! -path /data/connectors \
                             continue
                         }
                     
-                    SUBJECT_NAME="mqtt-$KAFKA_TOPIC-$TYPE"
+                    SUBJECT_NAME="mqtt$KAFKA_TOPIC-$TYPE"
 
                     # TODO: only delete and repush schema on startup in development
                     echo "Deleting old schema."
@@ -74,7 +73,7 @@ find /data/connectors ! -path /data/connectors \
                         && echo "Deleted old schema successfully."
 
                     echo "Pushing schema to registry." \
-                        && curl -sfSX POST \
+                        && curl -fSX POST \
                             -H "Content-Type: application/vnd.schemaregistry.v1+json" \
                             --data "{\"schema\":$(jq --compact-output '' \
                                 "$SCHEMA_FILE" | jq --raw-input '')}" \

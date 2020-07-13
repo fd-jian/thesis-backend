@@ -3,15 +3,15 @@
     "config": {
       "connector.class": "com.evokly.kafka.connect.mqtt.MqttSourceConnector",
       "processing.message_processor": "com.evokly.kafka.connect.mqtt.sample.AvroProcessor",
+      "processing.kafka_schema_subject": "sensors",
       "mqtt.qos": "1",
       "tasks.max": "1",
-      "mqtt.topic": "#",
+      "mqtt.topic": "sensors/+/+",
       "mqtt.connection_timeout": "30",
       "mqtt.keep_alive_interval": "60",
       "mqtt.server_uris": "ssl://mosquitto:8883",
       "mqtt.password": "null",
       "mqtt.ssl.ca_cert": "/etc/kafka/certs/ca.crt",
-      "kafka.topic": "accelerometer",
       "mqtt.user": "null",
       "mqtt.clean_session": "true",
       "mqtt.client_id": "null"
