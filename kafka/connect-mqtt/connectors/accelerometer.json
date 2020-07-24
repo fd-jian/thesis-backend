@@ -10,9 +10,9 @@
       "mqtt.connection_timeout": "30",
       "mqtt.keep_alive_interval": "60",
       "mqtt.server_uris": "ssl://mosquitto:8883",
-      "mqtt.password": "null",
+      "mqtt.password": "changeme",
       "mqtt.ssl.ca_cert": "/etc/kafka/certs/ca.crt",
-      "mqtt.user": "null",
+      "mqtt.user": "user",
       "mqtt.clean_session": "true",
       "mqtt.client_id": "null"
     }
