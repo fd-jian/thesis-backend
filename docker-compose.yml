@@ -9,7 +9,7 @@ services:
       - ./mosquitto/config:/mosquitto/config:ro
       - ./certs:/etc/mosquitto/certs:ro
     ports:
-      - "8883:8883"
+      - "8883:8883" # TODO: username/password auth
 
   mqtt-client:
     image: efrecon/mqtt-client
@@ -46,8 +46,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: snapshot
       TZ: "Europe/Berlin"
-    ports:
-      - "8002:8000"
+    #ports:
+      #- "8002:8000" # debug port disabled for security reasons in prod
 
   activity-detector:
     image: activity-detector
@@ -57,14 +57,14 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: snapshot
       TZ: "Europe/Berlin"
-    ports:
-      - "8001:8000"
+    #ports:
+      #- "8001:8000" # debug port disabled for security reasons in prod
 
   zookeeper:
     image: confluentinc/cp-zookeeper:5.2.1
     hostname: zookeeper
-    ports:
-      - "2181:2181"
+    #ports:
+      #- "2181:2181" # port disabled for security reasons in prod 
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       TZ: "Europe/Berlin"
@@ -75,9 +75,9 @@ services:
   kafka:
     image: confluentinc/cp-kafka:latest
     hostname: kafka
-    ports:
-      - "9092:9092"
-      - "29092:29092"
+    #ports: # port disabled for security reasons in prod 
+      #- "9092:9092"
+      #- "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
@@ -98,7 +98,7 @@ services:
     depends_on:
       - zookeeper
       - kafka
-    ports:
+    ports: # TODO: how to secure in production?
       - "8081:8081"
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
@@ -107,8 +107,8 @@ services:
   kafka-connect:
     image: confluentinc/cp-kafka-connect:latest
     hostname: kafka-connect
-    ports:
-        - "28083:28083"
+    #ports: # port disabled for security reasons in prod 
+        #- "28083:28083"
     environment:
       CONNECT_BOOTSTRAP_SERVERS: kafka:29092
       CONNECT_REST_PORT: 28083
@@ -125,7 +125,7 @@ services:
       CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
       CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
       CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
-      CONNECT_LOG4J_ROOT_LOGLEVEL: ERROR
+      CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
       TZ: "Europe/Berlin"
     volumes:
         - kafka-plugins:/usr/share/java/kafka-extra
