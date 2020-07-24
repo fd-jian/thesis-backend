@@ -7,13 +7,14 @@ services:
       - /mosquitto/data
       - /mosquitto/log
       - ./mosquitto/config:/mosquitto/config:ro
+      - ./mosquitto/passwd:/mosquitto/passwd:ro
       - ./certs:/etc/mosquitto/certs:ro
     ports:
       - "8883:8883" # TODO: username/password auth
 
   mqtt-client:
     image: efrecon/mqtt-client
-    command: sub -h mosquitto -p 8883 --cafile /opt/certs/ca.crt -t "#" -v 
+    command: sub -h mosquitto -p 8883 -u user -P changeme --cafile /opt/certs/ca.crt -t "#" -v 
     volumes:
       - ./certs/ca.crt:/opt/certs/ca.crt:ro
     depends_on:
@@ -98,8 +99,8 @@ services:
     depends_on:
       - zookeeper
       - kafka
-    ports: # TODO: how to secure in production?
-      - "8081:8081"
+    #ports: # TODO: how to secure in production?
+      #- "8081:8081"
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
