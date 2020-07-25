@@ -1,5 +1,5 @@
 const STATS_INTERVAL = 500;
-const ACC_INTERVAL = 100;
+const ACC_INTERVAL = 500;
 const MAX_LENGTH_ACC = 50;
 const MAX_LENGTH_STATS = 20;
 
@@ -10,21 +10,27 @@ let isRunning = false;
 let accInterval = null;
 let statsInterval = null;
 
-let acceleroChart = null;
+let linAccChart = null;
 let statChart = null;
 
 let timeSum = "0";
 let count = 0;
 let countPerSec = "0";
 let stamp = "";
-
-let x = 0;
-let y = 0;
-let z = 0;
 let time = "";
+
+const initial = [ 0, 0, 0 ];
+let charts = []
 
 let lastUpdatedStats;
 let lastUpdatedAcc;
+
+const topicMap = {
+  '/topic/linear-acceleration': 0,
+  '/topic/accelerometer': 1,
+  '/topic/gyroscope': 2,
+  '/topic/light': 3,
+}
 
 window.onload = function() {
   connect();
@@ -68,8 +74,21 @@ window.onload = function() {
     setGraphIntervals();
   }
 
+  const linAccChartCtx = document.getElementById('lin-acc-chart').getContext('2d');
+  linAccChart = new Chart(linAccChartCtx, createAcceleroChartCfg());
+
   const acceleroChartCtx = document.getElementById('accelero-chart').getContext('2d');
   acceleroChart = new Chart(acceleroChartCtx, createAcceleroChartCfg());
+  
+  const gyroChartCtx = document.getElementById('gyro-chart').getContext('2d');
+  gyroChart = new Chart(gyroChartCtx, createAcceleroChartCfg());
+
+  const lightChartCtx = document.getElementById('light-chart').getContext('2d');
+  lightChart = new Chart(lightChartCtx, createAcceleroChartCfg(1));
+
+  charts = [ linAccChart, acceleroChart, gyroChart, lightChart]
+    
+  charts.forEach(chart => chart.values = initial);
 
   const statChartCtx = document.getElementById('stat-chart').getContext('2d');
   statChart = new Chart(statChartCtx, getStatsChartCfg());
@@ -94,8 +113,21 @@ function connect() {
     stompClient.subscribe('/topic/stats', function (stats) {
       handleStats(JSON.parse(stats.body));
     });
-    stompClient.subscribe('/topic/accelerometer', function (record) {
-      handleAccelerometer(JSON.parse(record.body));
+    const linearAccTopic = '/topic/linear-acceleration';
+    stompClient.subscribe(linearAccTopic, function (record) {
+      handleAccelerometer(JSON.parse(record.body), linearAccTopic);
+    });
+    const accelerometerTopic ='/topic/accelerometer';
+    stompClient.subscribe(accelerometerTopic, function (record) {
+      handleAccelerometer(JSON.parse(record.body), accelerometerTopic);
+    });
+    const gyroscopeTopic ='/topic/gyroscope';
+    stompClient.subscribe(gyroscopeTopic, function (record) {
+      handleAccelerometer(JSON.parse(record.body), gyroscopeTopic);
+    });
+    const lightTopic ='/topic/light';
+    stompClient.subscribe(lightTopic, function (record) {
+      handleAccelerometer(JSON.parse(record.body), lightTopic);
     });
   });
   socket.onclose = function () {
@@ -105,11 +137,9 @@ function connect() {
   }
 }
 
-function handleAccelerometer(record) {
+function handleAccelerometer(record, topic) {
   lastUpdatedAcc = new Date();
-  x = record.x;
-  y = record.y;
-  z = record.z;
+  charts[topicMap[topic]].values = [ record.x, record.y, record.z ]
   time = record.time;
 }
 
@@ -192,45 +222,78 @@ function toggleGraphIntervals() {
   isRunning ? clearGraphIntervals() : setGraphIntervals();
 }
 
+
 function refreshAccGraph() {
   let now = new Date()
-  if (lastUpdatedAcc && now - lastUpdatedAcc > 2000) {
-    x = 0;
-    y = 0;
-    z = 0;
-  }
-  acceleroChart.data.labels.push(time);
+  const lastUpdate2SecPlus = lastUpdatedAcc && now - lastUpdatedAcc > 2000;
 
-  const labels = acceleroChart.data.labels;
-  if (labels.length > MAX_LENGTH_ACC) {
-    labels.shift();
-  }
+  charts.forEach((chart, i) => {
+    if (lastUpdate2SecPlus) {
+      chart.values = initial;
+    }
 
-  acceleroChart.data.datasets.forEach((dataset) => {
-    switch(dataset['label']) {
-      case 'x': 
-        dataset.data.push(x);
-        break;
-      case 'y':
-        dataset.data.push(y);
-        break;
-      case 'z':
-        dataset.data.push(z);
-        break;
-      default:
-        console.log("unknown dataset mentioned.")
+    chart.data.labels.push(time);
+
+    const labels = chart.data.labels;
+    if (labels.length > MAX_LENGTH_ACC) {
+      labels.shift();
     }
-    if (dataset.data.length > MAX_LENGTH_ACC ) {
-      dataset.data.shift();
-    }
+
+    chart.data.datasets.forEach((dataset) => {
+      const curChartData = chart.values[getNum(dataset.label) - 23];
+
+      if (curChartData) {
+        dataset.data.push(curChartData);
+      } else {
+          console.log("unknown dataset mentioned.")
+      }
+
+      if (dataset.data.length > MAX_LENGTH_ACC ) {
+        dataset.data.shift();
+      }
+    });
+
+    // TODO: move somewhere else
+    document.getElementById('count_sec').innerHTML = countPerSec;
+    document.getElementById('count').innerHTML = count;
+    document.getElementById('time_sum_sec').innerHTML = timeSum;
+    document.getElementById('stamp').innerHTML = stamp;
+
+    chart.update(0);
   });
 
-  document.getElementById('count_sec').innerHTML = countPerSec;
-  document.getElementById('count').innerHTML = count;
-  document.getElementById('time_sum_sec').innerHTML = timeSum;
-  document.getElementById('stamp').innerHTML = stamp;
+  //linAccChart.data.labels.push(time);
 
-  acceleroChart.update(0);
+  //const labels = linAccChart.data.labels;
+  //if (labels.length > MAX_LENGTH_ACC) {
+  //labels.shift();
+  //}
+
+  //linAccChart.data.datasets.forEach((dataset) => {
+  //switch(dataset['label']) {
+  //case 'x': 
+  //dataset.data.push(x);
+  //break;
+  //case 'y':
+  //dataset.data.push(y);
+  //break;
+  //case 'z':
+        //dataset.data.push(z);
+        //break;
+      //default:
+        //console.log("unknown dataset mentioned.")
+    //}
+    //if (dataset.data.length > MAX_LENGTH_ACC ) {
+      //dataset.data.shift();
+    //}
+  //});
+
+  //document.getElementById('count_sec').innerHTML = countPerSec;
+  //document.getElementById('count').innerHTML = count;
+  //document.getElementById('time_sum_sec').innerHTML = timeSum;
+  //document.getElementById('stamp').innerHTML = stamp;
+
+  //linAccChart.update(0);
 }
 
 function refreshStatsGraph() {
@@ -258,7 +321,29 @@ function refreshStatsGraph() {
   statChart.update(0);
 }
 
-function createAcceleroChartCfg() {
+const getAlpha = i => ((num = i + 10) > 35 ? num % 36 + 10 : num).toString(36);
+const getNum = a => a.charCodeAt(0) - 97;
+
+function createAcceleroChartCfg(paramLength = 3) {
+
+  const colors = [ 
+          'rgba(255, 255, 0, 0.6)', // yellow ela
+          'rgba(255, 0, 181, 0.6)', // shocking pink
+          'rgba(0, 152, 255, 0.6)', // indigo lulu 
+          'rgba(0, 255, 0, 0.6)',   // green flex
+          'rgba(255, 206, 86, 0.6)' // okra
+  ];
+
+  const datasets = [ ...Array(paramLength).keys() ].map( (x, i) => 
+    ({
+      label: getAlpha(i + 23),
+      data: [ ],
+      backgroundColor: [
+        colors[i % colors.length]
+      ]
+    })
+  );
+
   return {
     type: 'line', // bar, horizontalBar, pie, line, doughnut, radar, polarArea
     options: {
@@ -289,39 +374,7 @@ function createAcceleroChartCfg() {
     },
     data: {
       labels: [],
-      datasets: [{
-        label: 'x',
-        data: [ ],
-        backgroundColor: [
-            //'rgba(255, 206, 86, 0.6)', // okra
-          //'rgba(244, 162, 97, 0.6)', // orange
-          //'rgba(252, 186, 4, 0.6)', // yellow
-          //'rgba(255, 186, 8, 0.6)', // yellow other
-          //'rgba(255, 233, 0, 0.6)', // yellow bright
-          'rgba(255, 255, 0, 0.6)' // yellow ela
-        ]
-      },
-        {
-        label: 'y',
-        data: [ ],
-        backgroundColor: [
-          //'rgba(64, 249, 155, 0.6)' // green
-          //'rgba(0, 255, 0, 0.6)' // green flex
-          //'rgba(186, 39, 74, 0.6)'  // red
-          //'rgba(255, 0, 175, 0.6)' // fashion fuchsia pink
-          //'rgba(255, 0, 112, 0.6)' // winter sky magenta
-          'rgba(255, 0, 181, 0.6)' // shocking pink
-        ]
-      },
-        {
-          label: 'z',
-          data: [ ],
-          backgroundColor: [
-            //'rgba(75, 192, 192, 0.6)', // light blue
-            'rgba(0, 152, 255, 0.6)', // indigo lulu
-          ]
-        }
-      ]
+      datasets: datasets
     }
   }
 }
