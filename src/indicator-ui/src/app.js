@@ -34,7 +34,7 @@ const topicMap = {
 
 window.onload = function() {
   connect();
-  setGraphIntervals();
+  //setGraphIntervals();
 
   const btn = document.createElement("BUTTON");
   btn.id = 'btn-connect'
@@ -136,6 +136,20 @@ function connect() {
     setTimeout(connect, 3000);
   }
 }
+
+//function handleAccelerometer(record, topic) {
+    //const chart = charts[topicMap[topic]];
+    //chart.data.datasets[0].data.push({
+          //x: record.x,
+        //y: record.y,
+        //z: record.z
+    //});
+
+    //// update chart datasets keeping the current animation
+    //chart.update({
+        //preservation: true
+    //});
+//}
 
 function handleAccelerometer(record, topic) {
   lastUpdatedAcc = new Date();
@@ -307,6 +321,7 @@ function refreshStatsGraph() {
   }
 
   statChart.data.datasets.forEach((dataset) => {
+    console.log(countPerSec);
     switch(dataset['label']) {
       case 'countPerSec':
         dataset.data.push(parseFloat(countPerSec));
@@ -337,7 +352,7 @@ function createAcceleroChartCfg(paramLength = 3) {
   const datasets = [ ...Array(paramLength).keys() ].map( (x, i) => 
     ({
       label: getAlpha(i + 23),
-      data: [ ],
+      data: [],
       backgroundColor: [
         colors[i % colors.length]
       ]
@@ -347,20 +362,20 @@ function createAcceleroChartCfg(paramLength = 3) {
   return {
     type: 'line', // bar, horizontalBar, pie, line, doughnut, radar, polarArea
     options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      animation: {
-        duration: 1000 * 1,
-        easing: 'linear'
-      },
+      //responsive: true,
+      //maintainAspectRatio: true,
+      //animation: {
+        //duration: 1000 * 1,
+        //easing: 'linear'
+      //},
       scales: {
-        xAxes: [{
-          display: true,
-          scaleLabel: {
-            display: true,
-            labelString: 'Month'
-          }
-        }],
+        //xAxes: [{
+          //display: true,
+          //scaleLabel: {
+            //display: true,
+            //labelString: 'Month'
+          //}
+        //}],
         yAxes: [{
           display: true,
           ticks: {
@@ -369,11 +384,69 @@ function createAcceleroChartCfg(paramLength = 3) {
             max: 8,
             min: -8
           }
+        }],
+        xAxes: [{
+          type: 'realtime',
+          realtime: {         // per-axis options
+            duration: 20000,    // data in the past 20000 ms will be displayed
+            refresh: 30,      // onRefresh callback will be called every 1000 ms
+            delay: 50,        // delay of 1000 ms, so upcoming values are known before plotting a line
+            pause: false,       // chart is not paused
+            ttl: undefined,     // data will be automatically deleted as it disappears off the chart
+
+            // a callback to update datasets
+            onRefresh: function(chart) {
+              //console.log(chart.values);
+              // query your data source and get the array of {x: timestamp, y: value} objects
+              //var data = getLatestData();
+
+              // append the new data array to the existing chart data
+              
+              //chart.data.datasets[0].data.push({
+                //x: chart.values[0],
+                //y: chart.values[1],
+                //z: chart.values[2] 
+              //});
+              //Array.prototype.push.apply(chart.data.datasets[0].data, {
+    
+              //});
+
+              chart.data.datasets.forEach((dataset) => {
+                const curChartData = chart.values[getNum(dataset.label) - 23];
+
+                if (curChartData) {
+                  dataset.data.push({ 
+                    x: Date.now(),
+                    y: curChartData
+                  });
+                } else {
+                  console.log("unknown dataset mentioned.")
+                }
+
+              });
+
+            }
+          },
+          //type: 'realtime',
+          //realtime: {
+          //}
+          //display: true,
+          //ticks: {
+          //steps: 10,
+          //stepValue: 5,
+          //max: 8,
+          //min: -8
+          //}
         }]
+      },
+      plugins: {
+        streaming: {            // per-chart option
+          frameRate: 30       // chart is drawn 30 times every second
+        }
       }
     },
     data: {
-      labels: [],
+      //labels: [],
       datasets: datasets
     }
   }
