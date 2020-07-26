@@ -1,3 +1,4 @@
+// TODO: losing color when screen is full with graph
 const STATS_INTERVAL = 500;
 const ACC_INTERVAL = 500;
 const MAX_LENGTH_ACC = 50;
@@ -20,29 +21,59 @@ let stamp = "";
 let time = "";
 
 const initial = [ 0, 0, 0 ];
-let charts = []
+let charts = {};
 
 let lastUpdatedStats;
 let lastUpdatedAcc;
 
-const topicMap = {
-  '/topic/linear-acceleration': 0,
-  '/topic/accelerometer': 1,
-  '/topic/gyroscope': 2,
-  '/topic/light': 3,
+const GYRO_CHART = 'gyro-chart';
+const LIN_ACC_CHART = 'lin-acc-chart';
+const ACCELERO_CHART = 'accelero-chart';
+const LIGHT_CHART = 'light-chart';
+
+const defaultTickConf = {
+  stepSize: 1,
+  suggestedMin: -8,
+  suggestedMax: 8
+  //max: 8,
+  //min: -8
+};
+
+const tickConfigs = {
+  [GYRO_CHART]: defaultTickConf,
+  [LIN_ACC_CHART]: defaultTickConf,
+  [ACCELERO_CHART]: defaultTickConf,
+  [LIGHT_CHART]: {
+    stepSize: 10,
+    suggestedMin: 0,
+    suggestedMax: 150
+    //max: 150,
+    //min: 0
+  },
+};
+
+const topicToChartId = {
+  '/topic/linear-acceleration': LIN_ACC_CHART,
+  '/topic/accelerometer': ACCELERO_CHART,
+  '/topic/gyroscope': GYRO_CHART,
+  '/topic/light': LIGHT_CHART,
 }
 
-const topicTimes = {
-  0: {},
-  1: {},
-  2: {},
-  3: {}
+const chartTimings = {
+  [GYRO_CHART]: {},
+  [LIN_ACC_CHART]: {},
+  [ACCELERO_CHART]: {},
+  [LIGHT_CHART]: {}
 }
+
+const chartParamLengths = {
+  [GYRO_CHART]: 3,
+  [LIN_ACC_CHART]: 3,
+  [ACCELERO_CHART]: 3,
+  [LIGHT_CHART]: 1
+};
 
 window.onload = function() {
-  connect();
-  //setGraphIntervals();
-
   const btn = document.createElement("BUTTON");
   btn.id = 'btn-connect'
   btn.textContent = "CONNECT";
@@ -81,25 +112,25 @@ window.onload = function() {
     setGraphIntervals();
   }
 
-  const linAccChartCtx = document.getElementById('lin-acc-chart').getContext('2d');
-  linAccChart = new Chart(linAccChartCtx, createAcceleroChartCfg());
+  const linAccChartCtx = document.getElementById(LIN_ACC_CHART).getContext('2d');
+  const acceleroChartCtx = document.getElementById(ACCELERO_CHART).getContext('2d');
+  const gyroChartCtx = document.getElementById(GYRO_CHART).getContext('2d');
+  const lightChartCtx = document.getElementById(LIGHT_CHART).getContext('2d');
 
-  const acceleroChartCtx = document.getElementById('accelero-chart').getContext('2d');
-  acceleroChart = new Chart(acceleroChartCtx, createAcceleroChartCfg());
-  
-  const gyroChartCtx = document.getElementById('gyro-chart').getContext('2d');
-  gyroChart = new Chart(gyroChartCtx, createAcceleroChartCfg());
-
-  const lightChartCtx = document.getElementById('light-chart').getContext('2d');
-  lightChart = new Chart(lightChartCtx, createAcceleroChartCfg(1));
-
-  charts = [ linAccChart, acceleroChart, gyroChart, lightChart]
+  charts = { 
+    [LIN_ACC_CHART]: new Chart(linAccChartCtx, createAcceleroChartCfg(LIN_ACC_CHART)),
+    [ACCELERO_CHART]: new Chart(acceleroChartCtx, createAcceleroChartCfg(ACCELERO_CHART)),
+    [GYRO_CHART]: new Chart(gyroChartCtx, createAcceleroChartCfg(GYRO_CHART)),
+    [LIGHT_CHART]: new Chart(lightChartCtx, createAcceleroChartCfg(LIGHT_CHART))
+  };
     
-  charts.forEach(chart => chart.values = initial);
+  Object.entries(charts).forEach(chartsEntry => chartsEntry[1].values = initial);
 
   const statChartCtx = document.getElementById('stat-chart').getContext('2d');
   statChart = new Chart(statChartCtx, getStatsChartCfg());
 
+  connect();
+  //setGraphIntervals();
 }
 
 window.addEventListener('keypress', function(e) {
@@ -120,22 +151,13 @@ function connect() {
     stompClient.subscribe('/topic/stats', function (stats) {
       handleStats(JSON.parse(stats.body));
     });
-    const linearAccTopic = '/topic/linear-acceleration';
-    stompClient.subscribe(linearAccTopic, function (record) {
-      handleAccelerometer(JSON.parse(record.body), linearAccTopic);
+
+    Object.entries(topicToChartId).forEach(topicNameChartId => {
+      stompClient.subscribe(topicNameChartId[0], function (record) {
+        handleAccelerometer(JSON.parse(record.body), topicNameChartId[1]);
+      });
     });
-    const accelerometerTopic ='/topic/accelerometer';
-    stompClient.subscribe(accelerometerTopic, function (record) {
-      handleAccelerometer(JSON.parse(record.body), accelerometerTopic);
-    });
-    const gyroscopeTopic ='/topic/gyroscope';
-    stompClient.subscribe(gyroscopeTopic, function (record) {
-      handleAccelerometer(JSON.parse(record.body), gyroscopeTopic);
-    });
-    const lightTopic ='/topic/light';
-    stompClient.subscribe(lightTopic, function (record) {
-      handleAccelerometer(JSON.parse(record.body), lightTopic);
-    });
+
   });
   socket.onclose = function () {
     console.log("connection closed, reconnecting in 3s");
@@ -144,54 +166,38 @@ function connect() {
   }
 }
 
-let ii = 0;
-let now = Date.now();
-function handleAccelerometer(record, topic) {
-  topicIndex = topicMap[topic];
-  curTopicTimes = topicTimes[topicIndex];
-  curTopicTimes.now = Date.now();
+function handleAccelerometer(record, chartId) {
+  const timings = chartTimings[chartId];
+  const now = Date.now();
 
-  if(!curTopicTimes.old) curTopicTimes.old = Date.now();
+  if(!timings.old) timings.old = now;
 
-  if(curTopicTimes.now - curTopicTimes.old < 150) {
+  if(now - timings.old < 100) {
     return 
   }
 
-  curTopicTimes.old = curTopicTimes.now;
-  //if(ii > 500) {
-    //console.log(ii);
-    //return
-  //}
-  const chart = charts[topicMap[topic]];
+  timings.old = now;
+  const chart = charts[chartId];
 
   chart.data.datasets.forEach((dataset) => {
-    const num = getNum(dataset.label) - 23;
-    const curChartData = [record.x, record.y, record.z][num];
+    const curChartData = [record.x, record.y, record.z][getNum(dataset.label) - 23];
 
     if (curChartData) {
       dataset.data.push({ 
         //x: record.time,
-        x: curTopicTimes.now,
+        x: now,
         y: curChartData
       });
     } else {
       console.log("unknown dataset mentioned.")
     }
-
   });
 
   // update chart datasets keeping the current animation
     chart.update({
       preservation: true
     });
-  ii++
 }
-
-//function handleAccelerometer(record, topic) {
-  //lastUpdatedAcc = new Date();
-  //charts[topicMap[topic]].values = [ record.x, record.y, record.z ]
-  //time = record.time;
-//}
 
 function handleStats(stats) {
   lastUpdatedStats = new Date();
@@ -277,7 +283,7 @@ function refreshAccGraph() {
   let now = new Date()
   const lastUpdate2SecPlus = lastUpdatedAcc && now - lastUpdatedAcc > 2000;
 
-  charts.forEach((chart, i) => {
+  charts.forEach(chart => {
     if (lastUpdate2SecPlus) {
       chart.values = initial;
     }
@@ -311,39 +317,6 @@ function refreshAccGraph() {
 
     chart.update(0);
   });
-
-  //linAccChart.data.labels.push(time);
-
-  //const labels = linAccChart.data.labels;
-  //if (labels.length > MAX_LENGTH_ACC) {
-  //labels.shift();
-  //}
-
-  //linAccChart.data.datasets.forEach((dataset) => {
-  //switch(dataset['label']) {
-  //case 'x': 
-  //dataset.data.push(x);
-  //break;
-  //case 'y':
-  //dataset.data.push(y);
-  //break;
-  //case 'z':
-        //dataset.data.push(z);
-        //break;
-      //default:
-        //console.log("unknown dataset mentioned.")
-    //}
-    //if (dataset.data.length > MAX_LENGTH_ACC ) {
-      //dataset.data.shift();
-    //}
-  //});
-
-  //document.getElementById('count_sec').innerHTML = countPerSec;
-  //document.getElementById('count').innerHTML = count;
-  //document.getElementById('time_sum_sec').innerHTML = timeSum;
-  //document.getElementById('stamp').innerHTML = stamp;
-
-  //linAccChart.update(0);
 }
 
 function refreshStatsGraph() {
@@ -375,7 +348,7 @@ function refreshStatsGraph() {
 const getAlpha = i => ((num = i + 10) > 35 ? num % 36 + 10 : num).toString(36);
 const getNum = a => a.charCodeAt(0) - 97;
 
-function createAcceleroChartCfg(paramLength = 3) {
+function createAcceleroChartCfg(chartId) {
 
   const colors = [ 
           'rgba(255, 255, 0, 0.6)', // yellow ela
@@ -385,7 +358,7 @@ function createAcceleroChartCfg(paramLength = 3) {
           'rgba(255, 206, 86, 0.6)' // okra
   ];
 
-  const datasets = [ ...Array(paramLength).keys() ].map( (x, i) => 
+  const datasets = [ ...Array(chartParamLengths[chartId]).keys() ].map( (x, i) => 
     ({
       label: getAlpha(i + 23),
       data: [],
@@ -398,9 +371,6 @@ function createAcceleroChartCfg(paramLength = 3) {
   return {
     type: 'line', // bar, horizontalBar, pie, line, doughnut, radar, polarArea
     options: {
-      //animation: {
-        //duration: 0                    // general animation time
-      //},
       elements: {
         point:{
           radius: 0
@@ -409,7 +379,8 @@ function createAcceleroChartCfg(paramLength = 3) {
       responsive: true,
       maintainAspectRatio: true,
       animation: {
-        duration: 200,
+        //duration: 200,
+        duration: 0,
         easing: 'linear'
       },
       hover: {
@@ -422,79 +393,23 @@ function createAcceleroChartCfg(paramLength = 3) {
         }
       },
       scales: {
-        //xAxes: [{
-        //display: true,
-        //scaleLabel: {
-        //display: true,
-        //labelString: 'Month'
-        //}
-        //}],
         yAxes: [{
-          ticks: {
-            steps: 10,
-            stepValue: 5,
-            max: 8,
-            min: -8
-          }
+          ticks: tickConfigs[chartId]
         }],
         xAxes: [{
           type: 'realtime',
           realtime: {         // per-axis options
             duration: 20000,    // data in the past 20000 ms will be displayed
             //refresh: 30,      // onRefresh callback will be called every 1000 ms
-            delay: 50,        // delay of 1000 ms, so upcoming values are known before plotting a line
+            delay: 200,        // delay of 1000 ms, so upcoming values are known before plotting a line
             pause: false,       // chart is not paused
             //ttl: undefined,     // data will be automatically deleted as it disappears off the chart
             ttl: undefined     // data will be automatically deleted as it disappears off the chart
-
-            // a callback to update datasets
-            //onRefresh: function(chart) {
-              ////console.log(chart.values);
-              //// query your data source and get the array of {x: timestamp, y: value} objects
-              ////var data = getLatestData();
-
-              //// append the new data array to the existing chart data
-              
-              ////chart.data.datasets[0].data.push({
-                ////x: chart.values[0],
-                ////y: chart.values[1],
-                ////z: chart.values[2] 
-              ////});
-              ////Array.prototype.push.apply(chart.data.datasets[0].data, {
-    
-              ////});
-
-              //chart.data.datasets.forEach((dataset) => {
-                //const curChartData = chart.values[getNum(dataset.label) - 23];
-
-                //if (curChartData) {
-                  //dataset.data.push({ 
-                    //x: Date.now(),
-                    //y: curChartData
-                  //});
-                //} else {
-                  //console.log("unknown dataset mentioned.")
-                //}
-
-              //});
-
-            //}
           },
-          //type: 'realtime',
-          //realtime: {
-          //}
-          //display: true,
-          //ticks: {
-          //steps: 10,
-          //stepValue: 5,
-          //max: 8,
-          //min: -8
-          //}
         }]
       }
     },
     data: {
-      //labels: [],
       datasets: datasets
     }
   }
