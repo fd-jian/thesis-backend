@@ -32,6 +32,13 @@ const topicMap = {
   '/topic/light': 3,
 }
 
+const topicTimes = {
+  0: {},
+  1: {},
+  2: {},
+  3: {}
+}
+
 window.onload = function() {
   connect();
   //setGraphIntervals();
@@ -137,25 +144,54 @@ function connect() {
   }
 }
 
-//function handleAccelerometer(record, topic) {
-    //const chart = charts[topicMap[topic]];
-    //chart.data.datasets[0].data.push({
-          //x: record.x,
-        //y: record.y,
-        //z: record.z
-    //});
-
-    //// update chart datasets keeping the current animation
-    //chart.update({
-        //preservation: true
-    //});
-//}
-
+let ii = 0;
+let now = Date.now();
 function handleAccelerometer(record, topic) {
-  lastUpdatedAcc = new Date();
-  charts[topicMap[topic]].values = [ record.x, record.y, record.z ]
-  time = record.time;
+  topicIndex = topicMap[topic];
+  curTopicTimes = topicTimes[topicIndex];
+  curTopicTimes.now = Date.now();
+
+  if(!curTopicTimes.old) curTopicTimes.old = Date.now();
+
+  if(curTopicTimes.now - curTopicTimes.old < 150) {
+    return 
+  }
+
+  curTopicTimes.old = curTopicTimes.now;
+  //if(ii > 500) {
+    //console.log(ii);
+    //return
+  //}
+  const chart = charts[topicMap[topic]];
+
+  chart.data.datasets.forEach((dataset) => {
+    const num = getNum(dataset.label) - 23;
+    const curChartData = [record.x, record.y, record.z][num];
+
+    if (curChartData) {
+      dataset.data.push({ 
+        //x: record.time,
+        x: curTopicTimes.now,
+        y: curChartData
+      });
+    } else {
+      console.log("unknown dataset mentioned.")
+    }
+
+  });
+
+  // update chart datasets keeping the current animation
+    chart.update({
+      preservation: true
+    });
+  ii++
 }
+
+//function handleAccelerometer(record, topic) {
+  //lastUpdatedAcc = new Date();
+  //charts[topicMap[topic]].values = [ record.x, record.y, record.z ]
+  //time = record.time;
+//}
 
 function handleStats(stats) {
   lastUpdatedStats = new Date();
@@ -362,22 +398,38 @@ function createAcceleroChartCfg(paramLength = 3) {
   return {
     type: 'line', // bar, horizontalBar, pie, line, doughnut, radar, polarArea
     options: {
-      //responsive: true,
-      //maintainAspectRatio: true,
       //animation: {
-        //duration: 1000 * 1,
-        //easing: 'linear'
+        //duration: 0                    // general animation time
       //},
+      elements: {
+        point:{
+          radius: 0
+        }
+      },
+      responsive: true,
+      maintainAspectRatio: true,
+      animation: {
+        duration: 200,
+        easing: 'linear'
+      },
+      hover: {
+        animationDuration: 0           // duration of animations when hovering an item
+      },
+      responsiveAnimationDuration: 0,    // animation duration after a resize
+      plugins: {
+        streaming: {
+          frameRate: 20               // chart is drawn 5 times every second
+        }
+      },
       scales: {
         //xAxes: [{
-          //display: true,
-          //scaleLabel: {
-            //display: true,
-            //labelString: 'Month'
-          //}
+        //display: true,
+        //scaleLabel: {
+        //display: true,
+        //labelString: 'Month'
+        //}
         //}],
         yAxes: [{
-          display: true,
           ticks: {
             steps: 10,
             stepValue: 5,
@@ -389,43 +441,44 @@ function createAcceleroChartCfg(paramLength = 3) {
           type: 'realtime',
           realtime: {         // per-axis options
             duration: 20000,    // data in the past 20000 ms will be displayed
-            refresh: 30,      // onRefresh callback will be called every 1000 ms
+            //refresh: 30,      // onRefresh callback will be called every 1000 ms
             delay: 50,        // delay of 1000 ms, so upcoming values are known before plotting a line
             pause: false,       // chart is not paused
-            ttl: undefined,     // data will be automatically deleted as it disappears off the chart
+            //ttl: undefined,     // data will be automatically deleted as it disappears off the chart
+            ttl: undefined     // data will be automatically deleted as it disappears off the chart
 
             // a callback to update datasets
-            onRefresh: function(chart) {
-              //console.log(chart.values);
-              // query your data source and get the array of {x: timestamp, y: value} objects
-              //var data = getLatestData();
+            //onRefresh: function(chart) {
+              ////console.log(chart.values);
+              //// query your data source and get the array of {x: timestamp, y: value} objects
+              ////var data = getLatestData();
 
-              // append the new data array to the existing chart data
+              //// append the new data array to the existing chart data
               
-              //chart.data.datasets[0].data.push({
-                //x: chart.values[0],
-                //y: chart.values[1],
-                //z: chart.values[2] 
-              //});
-              //Array.prototype.push.apply(chart.data.datasets[0].data, {
+              ////chart.data.datasets[0].data.push({
+                ////x: chart.values[0],
+                ////y: chart.values[1],
+                ////z: chart.values[2] 
+              ////});
+              ////Array.prototype.push.apply(chart.data.datasets[0].data, {
     
+              ////});
+
+              //chart.data.datasets.forEach((dataset) => {
+                //const curChartData = chart.values[getNum(dataset.label) - 23];
+
+                //if (curChartData) {
+                  //dataset.data.push({ 
+                    //x: Date.now(),
+                    //y: curChartData
+                  //});
+                //} else {
+                  //console.log("unknown dataset mentioned.")
+                //}
+
               //});
 
-              chart.data.datasets.forEach((dataset) => {
-                const curChartData = chart.values[getNum(dataset.label) - 23];
-
-                if (curChartData) {
-                  dataset.data.push({ 
-                    x: Date.now(),
-                    y: curChartData
-                  });
-                } else {
-                  console.log("unknown dataset mentioned.")
-                }
-
-              });
-
-            }
+            //}
           },
           //type: 'realtime',
           //realtime: {
@@ -438,11 +491,6 @@ function createAcceleroChartCfg(paramLength = 3) {
           //min: -8
           //}
         }]
-      },
-      plugins: {
-        streaming: {            // per-chart option
-          frameRate: 30       // chart is drawn 30 times every second
-        }
       }
     },
     data: {
