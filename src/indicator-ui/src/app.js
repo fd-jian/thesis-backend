@@ -1,11 +1,11 @@
-// TODO: Fix stats chart
-
+const STATS_INTERVAL = 500;
 const MAX_LENGTH_STATS = 20;
 
 const GYRO_CHART = 'gyro-chart';
 const LIN_ACC_CHART = 'lin-acc-chart';
 const ACCELERO_CHART = 'accelero-chart';
 const LIGHT_CHART = 'light-chart';
+const STATS_CHART = 'stat-chart';
 
 const DEFAULT_TICK_CONF = {
   ticks: {
@@ -15,7 +15,19 @@ const DEFAULT_TICK_CONF = {
   }
 };
 
-const CHART_CONFIGS = {
+const LARGE_TICK_CONF = {
+  ticks: {
+    stepSize: 10,
+    suggestedMin: 0,
+    suggestedMax: 100
+  }
+};
+
+const LINE_CHART_TYPE = {
+  type: 'line' // bar, horizontalBar, pie, line, doughnut, radar, polarArea
+};
+
+const SENSOR_CHART_CONF = {
   [LIN_ACC_CHART]: { 
     ...DEFAULT_TICK_CONF,
     paramLength: 3,
@@ -32,23 +44,54 @@ const CHART_CONFIGS = {
     topicName: '/topic/gyroscope'
   },
   [LIGHT_CHART]: { 
-    ticks: {
-      stepSize: 10,
-      suggestedMin: 0,
-      suggestedMax: 150
-    },
+    ...LARGE_TICK_CONF,
     paramLength: 1,
     topicName: '/topic/light'
   }
 };
 
-const CHART_COLORS = [ 
+const SENSOR_CHART_COLORS = [ 
   'rgba(255, 255, 0, 0.6)', // yellow
   'rgba(255, 0, 181, 0.6)', // pink
   'rgba(0, 152, 255, 0.6)', // indigo
   'rgba(0, 255, 0, 0.6)',   // green
   'rgba(255, 206, 86, 0.6)' // okra
 ];
+
+const CHART_DEFAULT_CONF = {
+  elements: {
+    point:{
+      radius: 0
+    }
+  },
+  responsive: true,
+  maintainAspectRatio: true,
+  animation: {
+    //duration: 10000,
+    duration: 0,
+    easing: 'linear'
+  },
+  hover: {
+    animationDuration: 0           // duration of animations when hovering an item
+  },
+  responsiveAnimationDuration: 0,    // animation duration after a resize
+  plugins: {
+    streaming: {
+      frameRate: 20               // chart is drawn 5 times every second
+    }
+  }
+};
+
+const X_AXES_DEFAULT = {
+  xAxes: [{
+    type: 'realtime',
+    realtime: {         // per-axis options
+      //duration: 10000,    // data in the past 20000 ms will be displayed
+      delay: 100,        // delay of 1000 ms, so upcoming values are known before plotting a line
+      pause: false       // chart is not paused
+    },
+  }]
+}
 
 const CHART_DEFAULT_DATA = {
   lastUpdated: 0
@@ -59,17 +102,9 @@ const chartData = {
   [GYRO_CHART]: { ...CHART_DEFAULT_DATA },
   [LIN_ACC_CHART]: { ...CHART_DEFAULT_DATA },
   [ACCELERO_CHART]: { ...CHART_DEFAULT_DATA },
-  [LIGHT_CHART]: { ...CHART_DEFAULT_DATA }
+  [LIGHT_CHART]: { ...CHART_DEFAULT_DATA },
+  [STATS_CHART]: { ...CHART_DEFAULT_DATA }
 }
-
-let statChart = null;
-const statsChartData = {
-  timeSum: "0",
-  count: 0,
-  countPerSec: "0",
-  stamp: "",
-  lastUpdated: 0
-};
 
 let stompClient = null;
 let connected = false;
@@ -82,12 +117,12 @@ window.onload = function() {
     [LIN_ACC_CHART]: createSensorChart(LIN_ACC_CHART),
     [ACCELERO_CHART]: createSensorChart(ACCELERO_CHART),
     [GYRO_CHART]: createSensorChart(GYRO_CHART),
-    [LIGHT_CHART]: createSensorChart(LIGHT_CHART)
+    [LIGHT_CHART]: createSensorChart(LIGHT_CHART),
+    [STATS_CHART]: new Chart(
+      document.getElementById(STATS_CHART).getContext('2d'), 
+      getStatsChartCfg())
   };
     
-  const statChartCtx = document.getElementById('stat-chart').getContext('2d');
-  statChart = new Chart(statChartCtx, getStatsChartCfg());
-
   connect();
 }
 
@@ -107,12 +142,12 @@ function connect() {
     setConnected(true);
     console.log('Connected: ' + frame);
     stompClient.subscribe('/topic/stats', function (stats) {
-      handleStats(JSON.parse(stats.body));
+      handleStatsUpdate(JSON.parse(stats.body));
     });
 
-    Object.entries(CHART_CONFIGS).forEach(([chartId, config]) => {
+    Object.entries(SENSOR_CHART_CONF).forEach(([chartId, config]) => {
       stompClient.subscribe(config.topicName, function (record) {
-        handleChartUpdate(JSON.parse(record.body), chartId);
+        handleSensorUpdate(JSON.parse(record.body), chartId);
       });
     });
 
@@ -123,6 +158,8 @@ function connect() {
     setConnected(false);
     setTimeout(connect, 3000);
   }
+
+  resume();
 }
 
 function disconnect() {
@@ -130,6 +167,7 @@ function disconnect() {
     stompClient.disconnect();
   }
   setConnected(false);
+  pause();
 }
 
 
@@ -141,51 +179,24 @@ function createSensorChart(chartId) {
 
 function createSensorChartCfg(chartId) {
   // create as many datasets as the param length of the respective chart.
-  const datasets = [ ...Array(CHART_CONFIGS[chartId].paramLength).keys() ]
+  const datasets = [ ...Array(SENSOR_CHART_CONF[chartId].paramLength).keys() ]
     .map( (i) => ({
       // Array index is mapped to an alphanumeric parameter name alphabetically:
       // 0 => 'x', 1 => 'y', 2 => 'z', 3 => 'a', 4 => 'b', ... etc.
       label: indexToAlphaNumeric(i + 23),
       data: [],
-      backgroundColor: CHART_COLORS[i % CHART_COLORS.length]
+      backgroundColor: SENSOR_CHART_COLORS[i % SENSOR_CHART_COLORS.length]
     }));
 
   return {
-    type: 'line', // bar, horizontalBar, pie, line, doughnut, radar, polarArea
+    ...LINE_CHART_TYPE,
     options: {
-      elements: {
-        point:{
-          radius: 0
-        }
-      },
-      responsive: true,
-      maintainAspectRatio: true,
-      animation: {
-        //duration: 10000,
-        duration: 0,
-        easing: 'linear'
-      },
-      hover: {
-        animationDuration: 0           // duration of animations when hovering an item
-      },
-      responsiveAnimationDuration: 0,    // animation duration after a resize
-      plugins: {
-        streaming: {
-          frameRate: 20               // chart is drawn 5 times every second
-        }
-      },
+      ...CHART_DEFAULT_CONF,
       scales: {
         yAxes: [{
-          ticks: CHART_CONFIGS[chartId].ticks
+          ticks: SENSOR_CHART_CONF[chartId].ticks
         }],
-        xAxes: [{
-          type: 'realtime',
-          realtime: {         // per-axis options
-            //duration: 10000,    // data in the past 20000 ms will be displayed
-            delay: 100,        // delay of 1000 ms, so upcoming values are known before plotting a line
-            pause: false       // chart is not paused
-          },
-        }]
+        ...X_AXES_DEFAULT
       }
     },
     data: {
@@ -196,42 +207,27 @@ function createSensorChartCfg(chartId) {
 
 function getStatsChartCfg() {
   return {
-    type: 'line', // bar, horizontalBar, pie, line, doughnut, radar, polarArea
+    ...LINE_CHART_TYPE,
     options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      animation: {
-        duration: 1000 * 1,
-        easing: 'linear'
-      },
+      ...CHART_DEFAULT_CONF,
+      scales: {
+        yAxes: [ LARGE_TICK_CONF ],
+        ...X_AXES_DEFAULT
+      }
     },
     data: {
       labels: [ ],
       datasets: [{
         label: 'countPerSec',
         data: [ ],
-        backgroundColor: [
-          'rgba(54, 162, 235, 0.6)'
-        ]
+        backgroundColor: 'rgba(54, 162, 235, 0.6)'
       }]
     }
   }
 }
 
-function handleChartUpdate(record, chartId) {
-  const timings = chartData[chartId];
-  const now = Date.now();
-
-  if(now - timings.lastUpdated < 100) {
-    // use max 1 record every 100ms for performance reasons.
-    // the rest of the records will be ignored and not displayed
-    return 
-  }
-
-  timings.lastUpdated = now;
-  const chart = chartsById[chartId];
-
-  chart.data.datasets.forEach((dataset) => {
+function handleSensorUpdate(record, chartId) {
+  updateChart(chartId, record, (dataset, record, now) => {
     const curChartData = [record.x, record.y, record.z][getNum(dataset.label) - 23];
     if (curChartData) {
       dataset.data.push({ 
@@ -243,66 +239,91 @@ function handleChartUpdate(record, chartId) {
       console.log("unknown dataset mentioned.")
     }
   });
+}
+
+function indexToAlphaNumeric(i) { 
+  return ((num = i + 10) > 35 ? num % 36 + 10 : num).toString(36);
+}
+
+function getNum(a) { 
+  return a.charCodeAt(0) - 97;
+}
+
+function handleStatsUpdate(stats) {
+  updateChart(STATS_CHART, stats, (dataset, record, now) => {
+    switch(dataset['label']) {
+      case 'countPerSec':
+        dataset.data.push({ 
+          //x: record.time
+          x: now,
+          y: parseFloat(record.countPerSecond)
+        });
+        break;
+      default:
+        console.log("unknown dataset mentioned.")
+    }
+  });
+
+  document.getElementById('count_sec').innerHTML = stats.countPerSecond;
+  document.getElementById('count').innerHTML = stats.count;
+  document.getElementById('time_sum_sec').innerHTML = stats.timeSumSec;
+  document.getElementById('stamp').innerHTML = stats.time;
+}
+
+function updateChart(chartId, record, callback) {
+  if(!isRunning) {
+    return;
+  }
+  const now = Date.now();
+  const timings = chartData[chartId];
+
+  if(now - timings.lastUpdated < 100) {
+    // use max 1 record every 100ms for performance reasons.
+    // the rest of the records will be ignored and not displayed
+    return 
+  }
+
+  timings.lastUpdated = now;
+
+  const chart = chartsById[chartId];
+  chart.data.datasets.forEach((dataset) => {
+    callback(dataset, record, now);
+  });
 
   chart.update({
     preservation: true
   });
 }
 
-function handleStats(stats) {
-  statsChartData.lastUpdated = new Date();
-  statsChartData.count = stats.count;
-  statsChartData.timeSum = stats.timeSumSec;
-  statsChartData.countPerSec = stats.countPerSecond;
-  statsChartData.stamp = stats.time;
-}
-
 function toggleGraphIntervals() {
-  isRunning ? clearGraphIntervals() : setGraphIntervals();
+  isRunning ? pause() : resume();
 }
 
-function refreshStatsGraph() {
-  let now = new Date()
-  if (now - statsChartData.lastUpdated > 2000) {
-    statsChartData.countPerSec = "0";
-  }
-  statChart.data.labels.push(now);
-  if (statChart.data.labels.length > MAX_LENGTH_STATS) {
-    statChart.data.labels.shift();
-  }
-
-  statChart.data.datasets.forEach((dataset) => {
-    switch(dataset['label']) {
-      case 'countPerSec':
-        dataset.data.push(parseFloat(statsChartData.countPerSec));
-        break;
-      default:
-        console.log("unknown dataset mentioned.")
-    }
-    if (dataset.data.length > MAX_LENGTH_STATS ) {
-      dataset.data.shift();
-    }
-  });
-  statChart.update(0);
-}
-
-function setGraphIntervals() {
+function resume() {
   if(isRunning) {
-    return false;
+    return;
   }
   isRunning = true;
-  // TODO: implement resume
+
+  Object.entries(chartsById).forEach(chartEntry => {
+    chartEntry[1].options.scales.xAxes[0].realtime.pause = false;
+    chartEntry[1].update({ duration: 0 });
+  });
 
   refreshPauseBtns();
   console.log("resume graph");
 }
 
-function clearGraphIntervals() {
+function pause() {
   if(!isRunning) {
     return false;
   }
   isRunning = false;
-  // TODO: implement pause
+
+  Object.entries(chartsById).forEach(chartEntry => {
+    chartEntry[1].options.scales.xAxes[0].realtime.pause = true
+    chartEntry[1].update({ duration: 0 });
+  });
 
   refreshPauseBtns();
   console.log("pause graph");
@@ -339,11 +360,11 @@ function createButtons() {
   })
 
   createButton('btn-pause', 'PAUSE GRAPH', true, function () {
-    clearGraphIntervals();
+    pause();
   });
 
   createButton('btn-resume', 'RESUME GRAPH', true, function () {
-    setGraphIntervals();
+    resume();
   });
 }
 
@@ -358,27 +379,19 @@ function createButton(id, textContent, disabled, callback) {
 }
 
 function refreshPauseBtns() {
-    const btnPs = document.getElementById("btn-pause");
-    const btnRes = document.getElementById("btn-resume");
+  const btnPs = document.getElementById("btn-pause");
+  const btnRes = document.getElementById("btn-resume");
 
-    if(!btnPs || !btnRes) {
-      return false;
-    }
+  if(!btnPs || !btnRes) {
+    return false;
+  }
 
-    if(isRunning) {
-      btnRes.disabled = true;
-      btnPs.disabled = false;
-    } else {
-      btnRes.disabled = false;
-      btnPs.disabled = true;
-    }
-}
-
-function indexToAlphaNumeric(i) { 
-  return ((num = i + 10) > 35 ? num % 36 + 10 : num).toString(36);
-}
-
-function getNum(a) { 
-  return a.charCodeAt(0) - 97;
+  if(isRunning) {
+    btnRes.disabled = true;
+    btnPs.disabled = false;
+  } else {
+    btnRes.disabled = false;
+    btnPs.disabled = true;
+  }
 }
 
