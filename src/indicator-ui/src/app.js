@@ -1,101 +1,22 @@
-const STATS_INTERVAL = 500;
-const MAX_LENGTH_STATS = 20;
+import {
+  CHART_IDS,
+  SENSOR_CHARTS,
+  BUTTON_IDS,
+  BUTTON_TEXTS,
+  VIEW_IDS,
+  LINE_CHART_TYPE,
+  CHART_CONF,
+  SENSOR_CHART_COLORS,
+  CHART_DEFAULT_CONF,
+  X_AXES_DEFAULT,
+  CHART_DEFAULT_DATA
+} from './constants.js';
 
-const GYRO_CHART = 'gyro-chart';
-const LIN_ACC_CHART = 'lin-acc-chart';
-const ACCELERO_CHART = 'accelero-chart';
-const LIGHT_CHART = 'light-chart';
-const STATS_CHART = 'stat-chart';
-
-const DEFAULT_TICK_CONF = {
-  ticks: {
-    stepSize: 1,
-    suggestedMin: -8,
-    suggestedMax: 8
-  }
-};
-
-const LARGE_TICK_CONF = {
-  ticks: {
-    stepSize: 10,
-    suggestedMin: 0,
-    suggestedMax: 100
-  }
-};
-
-const LINE_CHART_TYPE = {
-  type: 'line' // bar, horizontalBar, pie, line, doughnut, radar, polarArea
-};
-
-const SENSOR_CHART_CONF = {
-  [LIN_ACC_CHART]: { 
-    ...DEFAULT_TICK_CONF,
-    paramLength: 3,
-    topicName: '/topic/linear-acceleration'
-  },
-  [ACCELERO_CHART]: { 
-    ...DEFAULT_TICK_CONF,
-    paramLength: 3,
-    topicName: '/topic/accelerometer'
-  },
-  [GYRO_CHART]: { 
-    ...DEFAULT_TICK_CONF,
-    paramLength: 3,
-    topicName: '/topic/gyroscope'
-  },
-  [LIGHT_CHART]: { 
-    ...LARGE_TICK_CONF,
-    paramLength: 1,
-    topicName: '/topic/light'
-  }
-};
-
-const SENSOR_CHART_COLORS = [ 
-  'rgba(255, 255, 0, 0.6)', // yellow
-  'rgba(255, 0, 181, 0.6)', // pink
-  'rgba(0, 152, 255, 0.6)', // indigo
-  'rgba(0, 255, 0, 0.6)',   // green
-  'rgba(255, 206, 86, 0.6)' // okra
-];
-
-const CHART_DEFAULT_CONF = {
-  elements: {
-    point:{
-      radius: 0
-    }
-  },
-  responsive: true,
-  maintainAspectRatio: true,
-  animation: {
-    //duration: 10000,
-    duration: 0,
-    easing: 'linear'
-  },
-  hover: {
-    animationDuration: 0           // duration of animations when hovering an item
-  },
-  responsiveAnimationDuration: 0,    // animation duration after a resize
-  plugins: {
-    streaming: {
-      frameRate: 20               // chart is drawn 5 times every second
-    }
-  }
-};
-
-const X_AXES_DEFAULT = {
-  xAxes: [{
-    type: 'realtime',
-    realtime: {         // per-axis options
-      //duration: 10000,    // data in the past 20000 ms will be displayed
-      delay: 100,        // delay of 1000 ms, so upcoming values are known before plotting a line
-      pause: false       // chart is not paused
-    },
-  }]
-}
-
-const CHART_DEFAULT_DATA = {
-  lastUpdated: 0
-};
+const GYRO_CHART = CHART_IDS.gyroChart;
+const LIN_ACC_CHART = CHART_IDS.linAccChart;
+const ACCELERO_CHART = CHART_IDS.acceleroChart;
+const LIGHT_CHART = CHART_IDS.lightChart;
+const STATS_CHART_ID = CHART_IDS.statsChart;
 
 let chartsById = {};
 const chartData = {
@@ -103,11 +24,10 @@ const chartData = {
   [LIN_ACC_CHART]: { ...CHART_DEFAULT_DATA },
   [ACCELERO_CHART]: { ...CHART_DEFAULT_DATA },
   [LIGHT_CHART]: { ...CHART_DEFAULT_DATA },
-  [STATS_CHART]: { ...CHART_DEFAULT_DATA }
+  [STATS_CHART_ID]: { ...CHART_DEFAULT_DATA }
 }
 
 let stompClient = null;
-let connected = false;
 let isRunning = false;
 
 window.onload = function() {
@@ -118,8 +38,8 @@ window.onload = function() {
     [ACCELERO_CHART]: createSensorChart(ACCELERO_CHART),
     [GYRO_CHART]: createSensorChart(GYRO_CHART),
     [LIGHT_CHART]: createSensorChart(LIGHT_CHART),
-    [STATS_CHART]: new Chart(
-      document.getElementById(STATS_CHART).getContext('2d'), 
+    [STATS_CHART_ID]: new Chart(
+      document.getElementById(STATS_CHART_ID).getContext('2d'), 
       getStatsChartCfg())
   };
     
@@ -145,11 +65,13 @@ function connect() {
       handleStatsUpdate(JSON.parse(stats.body));
     });
 
-    Object.entries(SENSOR_CHART_CONF).forEach(([chartId, config]) => {
-      stompClient.subscribe(config.topicName, function (record) {
-        handleSensorUpdate(JSON.parse(record.body), chartId);
+    SENSOR_CHARTS
+      .map(chartId => [ chartId, CHART_CONF[chartId] ])
+      .forEach(([chartId, config]) => {
+        stompClient.subscribe(config.topicName, function (record) {
+          handleSensorUpdate(JSON.parse(record.body), chartId);
+        });
       });
-    });
 
   });
 
@@ -170,7 +92,6 @@ function disconnect() {
   pause();
 }
 
-
 function createSensorChart(chartId) { 
   return new Chart(
     document.getElementById(chartId).getContext('2d'), 
@@ -179,8 +100,8 @@ function createSensorChart(chartId) {
 
 function createSensorChartCfg(chartId) {
   // create as many datasets as the param length of the respective chart.
-  const datasets = [ ...Array(SENSOR_CHART_CONF[chartId].paramLength).keys() ]
-    .map( (i) => ({
+  const datasets = [ ...Array(CHART_CONF[chartId].paramLength).keys() ]
+    .map((i) => ({
       // Array index is mapped to an alphanumeric parameter name alphabetically:
       // 0 => 'x', 1 => 'y', 2 => 'z', 3 => 'a', 4 => 'b', ... etc.
       label: indexToAlphaNumeric(i + 23),
@@ -194,7 +115,7 @@ function createSensorChartCfg(chartId) {
       ...CHART_DEFAULT_CONF,
       scales: {
         yAxes: [{
-          ticks: SENSOR_CHART_CONF[chartId].ticks
+          ticks: CHART_CONF[chartId].ticks
         }],
         ...X_AXES_DEFAULT
       }
@@ -206,21 +127,23 @@ function createSensorChartCfg(chartId) {
 }
 
 function getStatsChartCfg() {
+  const config = CHART_CONF[STATS_CHART_ID];
   return {
     ...LINE_CHART_TYPE,
     options: {
       ...CHART_DEFAULT_CONF,
       scales: {
-        yAxes: [ LARGE_TICK_CONF ],
+        yAxes: [{
+          ticks: config.ticks,
+        }],
         ...X_AXES_DEFAULT
       }
     },
     data: {
-      labels: [ ],
+      labels: [],
       datasets: [{
-        label: 'countPerSec',
-        data: [ ],
-        backgroundColor: 'rgba(54, 162, 235, 0.6)'
+        ...config.datasets.countPerSec,
+        data: []
       }]
     }
   }
@@ -241,8 +164,12 @@ function handleSensorUpdate(record, chartId) {
   });
 }
 
-function indexToAlphaNumeric(i) { 
-  return ((num = i + 10) > 35 ? num % 36 + 10 : num).toString(36);
+function indexToAlphaNumeric(i) {
+  return indexToAlphaNumericNoOff(i + 10);
+}
+
+function indexToAlphaNumericNoOff(i) {
+  return (i > 35 ? i % 36 + 10 : i).toString(36);
 }
 
 function getNum(a) { 
@@ -250,9 +177,9 @@ function getNum(a) {
 }
 
 function handleStatsUpdate(stats) {
-  updateChart(STATS_CHART, stats, (dataset, record, now) => {
+  updateChart(STATS_CHART_ID, stats, (dataset, record, now) => {
     switch(dataset['label']) {
-      case 'countPerSec':
+      case CHART_CONF[STATS_CHART_ID].datasets.countPerSec.label:
         dataset.data.push({ 
           //x: record.time
           x: now,
@@ -264,10 +191,10 @@ function handleStatsUpdate(stats) {
     }
   });
 
-  document.getElementById('count_sec').innerHTML = stats.countPerSecond;
-  document.getElementById('count').innerHTML = stats.count;
-  document.getElementById('time_sum_sec').innerHTML = stats.timeSumSec;
-  document.getElementById('stamp').innerHTML = stats.time;
+  document.getElementById(VIEW_IDS.countPerSec).innerHTML = stats.countPerSec;
+  document.getElementById(VIEW_IDS.count).innerHTML = stats.count;
+  document.getElementById(VIEW_IDS.timeSumSec).innerHTML = stats.timeSumSec;
+  document.getElementById(VIEW_IDS.time).innerHTML = stats.time;
 }
 
 function updateChart(chartId, record, callback) {
@@ -330,11 +257,10 @@ function pause() {
 }
 
 function setConnected(conn) {
-  connected = conn;
-  const btnCon = document.getElementById("btn-connect");
-  const btnDisc = document.getElementById("btn-disconnect");
-  const btnPs = document.getElementById("btn-pause");
-  const btnRes = document.getElementById("btn-resume");
+  const btnCon = document.getElementById(BUTTON_IDS.connect);
+  const btnDisc = document.getElementById(BUTTON_IDS.disconnect);
+  const btnPs = document.getElementById(BUTTON_IDS.pause);
+  const btnRes = document.getElementById(BUTTON_IDS.resume);
 
   if(conn) {
     btnCon.disabled = true;
@@ -349,38 +275,35 @@ function setConnected(conn) {
 }
 
 function createButtons() {
-  createButton('btn-connect', 'CONNECT', true, function () {
+  createButton(BUTTON_IDS.connect, BUTTON_TEXTS[BUTTON_IDS.connect], function () {
     console.log("connect btn")
     connect();
   });
-
-  createButton('btn-disconnect', 'DISCONNECT', true, function () {
+  createButton(BUTTON_IDS.disconnect, BUTTON_TEXTS[BUTTON_IDS.disconnect], function () {
     console.log("disconnect btn")
     disconnect();
   })
-
-  createButton('btn-pause', 'PAUSE GRAPH', true, function () {
+  createButton(BUTTON_IDS.pause, BUTTON_TEXTS[BUTTON_IDS.pause], function () {
     pause();
   });
-
-  createButton('btn-resume', 'RESUME GRAPH', true, function () {
+  createButton(BUTTON_IDS.resume, BUTTON_TEXTS[BUTTON_IDS.resume], function () {
     resume();
   });
 }
 
-function createButton(id, textContent, disabled, callback) {
+function createButton(id, textContent, callback) {
   const btn = document.createElement("BUTTON");
   btn.id = id
   btn.textContent = textContent;
   document.getElementById("buttons").appendChild(btn);
-  btn.disabled = disabled;
+  btn.disabled = true;
   btn.onclick = callback;
   return btn;
 }
 
 function refreshPauseBtns() {
-  const btnPs = document.getElementById("btn-pause");
-  const btnRes = document.getElementById("btn-resume");
+  const btnPs = document.getElementById(BUTTON_IDS.pause);
+  const btnRes = document.getElementById(BUTTON_IDS.resume);
 
   if(!btnPs || !btnRes) {
     return false;
