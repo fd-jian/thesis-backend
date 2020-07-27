@@ -1,77 +1,77 @@
-// TODO: losing color when screen is full with graph
-const STATS_INTERVAL = 500;
-const ACC_INTERVAL = 500;
-const MAX_LENGTH_ACC = 50;
 const MAX_LENGTH_STATS = 20;
-
-let stompClient = null;
-let connected = false;
-
-let isRunning = false;
-let accInterval = null;
-let statsInterval = null;
-
-let linAccChart = null;
-let statChart = null;
-
-let timeSum = "0";
-let count = 0;
-let countPerSec = "0";
-let stamp = "";
-let time = "";
-
-const initial = [ 0, 0, 0 ];
-let charts = {};
-
-let lastUpdatedStats;
-let lastUpdatedAcc;
 
 const GYRO_CHART = 'gyro-chart';
 const LIN_ACC_CHART = 'lin-acc-chart';
 const ACCELERO_CHART = 'accelero-chart';
 const LIGHT_CHART = 'light-chart';
 
-const defaultTickConf = {
-  stepSize: 1,
-  suggestedMin: -8,
-  suggestedMax: 8
-  //max: 8,
-  //min: -8
+const DEFAULT_TICK_CONF = {
+  ticks: {
+    stepSize: 1,
+    suggestedMin: -8,
+    suggestedMax: 8
+  }
 };
 
-const tickConfigs = {
-  [GYRO_CHART]: defaultTickConf,
-  [LIN_ACC_CHART]: defaultTickConf,
-  [ACCELERO_CHART]: defaultTickConf,
-  [LIGHT_CHART]: {
-    stepSize: 10,
-    suggestedMin: 0,
-    suggestedMax: 150
-    //max: 150,
-    //min: 0
+const CHART_CONFIGS = {
+  [LIN_ACC_CHART]: { 
+    ...DEFAULT_TICK_CONF,
+    paramLength: 3,
+    topicName: '/topic/linear-acceleration'
   },
+  [ACCELERO_CHART]: { 
+    ...DEFAULT_TICK_CONF,
+    paramLength: 3,
+    topicName: '/topic/accelerometer'
+  },
+  [GYRO_CHART]: { 
+    ...DEFAULT_TICK_CONF,
+    paramLength: 3,
+    topicName: '/topic/gyroscope'
+  },
+  [LIGHT_CHART]: { 
+    ticks: {
+      stepSize: 10,
+      suggestedMin: 0,
+      suggestedMax: 150
+    },
+    paramLength: 1,
+    topicName: '/topic/light'
+  }
 };
 
-const topicToChartId = {
-  '/topic/linear-acceleration': LIN_ACC_CHART,
-  '/topic/accelerometer': ACCELERO_CHART,
-  '/topic/gyroscope': GYRO_CHART,
-  '/topic/light': LIGHT_CHART,
-}
+const CHART_COLORS = [ 
+  'rgba(255, 255, 0, 0.6)', // yellow
+  'rgba(255, 0, 181, 0.6)', // pink
+  'rgba(0, 152, 255, 0.6)', // indigo
+  'rgba(0, 255, 0, 0.6)',   // green
+  'rgba(255, 206, 86, 0.6)' // okra
+];
 
-const chartTimings = {
-  [GYRO_CHART]: {},
-  [LIN_ACC_CHART]: {},
-  [ACCELERO_CHART]: {},
-  [LIGHT_CHART]: {}
-}
-
-const chartParamLengths = {
-  [GYRO_CHART]: 3,
-  [LIN_ACC_CHART]: 3,
-  [ACCELERO_CHART]: 3,
-  [LIGHT_CHART]: 1
+const CHART_DEFAULT_DATA = {
+  lastUpdated: 0
 };
+
+let chartsById = {};
+const chartData = {
+  [GYRO_CHART]: { ...CHART_DEFAULT_DATA },
+  [LIN_ACC_CHART]: { ...CHART_DEFAULT_DATA },
+  [ACCELERO_CHART]: { ...CHART_DEFAULT_DATA },
+  [LIGHT_CHART]: { ...CHART_DEFAULT_DATA }
+}
+
+let statChart = null;
+const statsChartData = {
+  timeSum: "0",
+  count: 0,
+  countPerSec: "0",
+  stamp: "",
+  lastUpdated: 0
+};
+
+let stompClient = null;
+let connected = false;
+let isRunning = false;
 
 window.onload = function() {
   const btn = document.createElement("BUTTON");
@@ -117,20 +117,17 @@ window.onload = function() {
   const gyroChartCtx = document.getElementById(GYRO_CHART).getContext('2d');
   const lightChartCtx = document.getElementById(LIGHT_CHART).getContext('2d');
 
-  charts = { 
+  chartsById = { 
     [LIN_ACC_CHART]: new Chart(linAccChartCtx, createAcceleroChartCfg(LIN_ACC_CHART)),
     [ACCELERO_CHART]: new Chart(acceleroChartCtx, createAcceleroChartCfg(ACCELERO_CHART)),
     [GYRO_CHART]: new Chart(gyroChartCtx, createAcceleroChartCfg(GYRO_CHART)),
     [LIGHT_CHART]: new Chart(lightChartCtx, createAcceleroChartCfg(LIGHT_CHART))
   };
     
-  Object.entries(charts).forEach(chartsEntry => chartsEntry[1].values = initial);
-
   const statChartCtx = document.getElementById('stat-chart').getContext('2d');
   statChart = new Chart(statChartCtx, getStatsChartCfg());
 
   connect();
-  //setGraphIntervals();
 }
 
 window.addEventListener('keypress', function(e) {
@@ -152,9 +149,9 @@ function connect() {
       handleStats(JSON.parse(stats.body));
     });
 
-    Object.entries(topicToChartId).forEach(topicNameChartId => {
-      stompClient.subscribe(topicNameChartId[0], function (record) {
-        handleAccelerometer(JSON.parse(record.body), topicNameChartId[1]);
+    Object.entries(CHART_CONFIGS).forEach(([chartId, config]) => {
+      stompClient.subscribe(config.topicName, function (record) {
+        handleChartUpdate(JSON.parse(record.body), chartId);
       });
     });
 
@@ -166,22 +163,21 @@ function connect() {
   }
 }
 
-function handleAccelerometer(record, chartId) {
-  const timings = chartTimings[chartId];
+function handleChartUpdate(record, chartId) {
+  const timings = chartData[chartId];
   const now = Date.now();
 
-  if(!timings.old) timings.old = now;
-
-  if(now - timings.old < 100) {
+  if(now - timings.lastUpdated < 100) {
+    // use max 1 record every 100ms for performance reasons.
+    // the rest of the records will be ignored and not displayed
     return 
   }
 
-  timings.old = now;
-  const chart = charts[chartId];
+  timings.lastUpdated = now;
+  const chart = chartsById[chartId];
 
   chart.data.datasets.forEach((dataset) => {
     const curChartData = [record.x, record.y, record.z][getNum(dataset.label) - 23];
-
     if (curChartData) {
       dataset.data.push({ 
         //x: record.time,
@@ -193,18 +189,17 @@ function handleAccelerometer(record, chartId) {
     }
   });
 
-  // update chart datasets keeping the current animation
-    chart.update({
-      preservation: true
-    });
+  chart.update({
+    preservation: true
+  });
 }
 
 function handleStats(stats) {
-  lastUpdatedStats = new Date();
-  count = stats.count;
-  timeSum = stats.timeSumSec;
-  countPerSec = stats.countPerSecond;
-  stamp = stats.time;
+  statsChartData.lastUpdated = new Date();
+  statsChartData.count = stats.count;
+  statsChartData.timeSum = stats.timeSumSec;
+  statsChartData.countPerSec = stats.countPerSecond;
+  statsChartData.stamp = stats.time;
 }
 
 function disconnect() {
@@ -231,7 +226,6 @@ function setConnected(conn) {
     btnPs.disabled = true;
     btnRes.disabled = true;
   }
-
 }
 
 function refreshPauseBtns() {
@@ -249,7 +243,6 @@ function refreshPauseBtns() {
       btnRes.disabled = false;
       btnPs.disabled = true;
     }
-
 }
 
 function clearGraphIntervals() {
@@ -257,8 +250,8 @@ function clearGraphIntervals() {
     return false;
   }
   isRunning = false;
-  clearInterval(accInterval);
-  clearInterval(statsInterval);
+  // TODO: implement pause
+
   refreshPauseBtns();
   console.log("pause graph");
 }
@@ -268,8 +261,8 @@ function setGraphIntervals() {
     return false;
   }
   isRunning = true;
-  accInterval = setInterval(refreshAccGraph, ACC_INTERVAL);
-  statsInterval = setInterval(refreshStatsGraph, STATS_INTERVAL);
+  // TODO: implement resume
+
   refreshPauseBtns();
   console.log("resume graph");
 }
@@ -278,51 +271,10 @@ function toggleGraphIntervals() {
   isRunning ? clearGraphIntervals() : setGraphIntervals();
 }
 
-
-function refreshAccGraph() {
-  let now = new Date()
-  const lastUpdate2SecPlus = lastUpdatedAcc && now - lastUpdatedAcc > 2000;
-
-  charts.forEach(chart => {
-    if (lastUpdate2SecPlus) {
-      chart.values = initial;
-    }
-
-    chart.data.labels.push(time);
-
-    const labels = chart.data.labels;
-    if (labels.length > MAX_LENGTH_ACC) {
-      labels.shift();
-    }
-
-    chart.data.datasets.forEach((dataset) => {
-      const curChartData = chart.values[getNum(dataset.label) - 23];
-
-      if (curChartData) {
-        dataset.data.push(curChartData);
-      } else {
-          console.log("unknown dataset mentioned.")
-      }
-
-      if (dataset.data.length > MAX_LENGTH_ACC ) {
-        dataset.data.shift();
-      }
-    });
-
-    // TODO: move somewhere else
-    document.getElementById('count_sec').innerHTML = countPerSec;
-    document.getElementById('count').innerHTML = count;
-    document.getElementById('time_sum_sec').innerHTML = timeSum;
-    document.getElementById('stamp').innerHTML = stamp;
-
-    chart.update(0);
-  });
-}
-
 function refreshStatsGraph() {
   let now = new Date()
-  if (lastUpdatedStats && now - lastUpdatedStats > 2000) {
-    countPerSec = "0";
+  if (now - statsChartData.lastUpdated > 2000) {
+    statsChartData.countPerSec = "0";
   }
   statChart.data.labels.push(now);
   if (statChart.data.labels.length > MAX_LENGTH_STATS) {
@@ -330,10 +282,9 @@ function refreshStatsGraph() {
   }
 
   statChart.data.datasets.forEach((dataset) => {
-    console.log(countPerSec);
     switch(dataset['label']) {
       case 'countPerSec':
-        dataset.data.push(parseFloat(countPerSec));
+        dataset.data.push(parseFloat(statsChartData.countPerSec));
         break;
       default:
         console.log("unknown dataset mentioned.")
@@ -345,27 +296,21 @@ function refreshStatsGraph() {
   statChart.update(0);
 }
 
-const getAlpha = i => ((num = i + 10) > 35 ? num % 36 + 10 : num).toString(36);
+const indexToAlphaNumeric = i => ((num = i + 10) > 35 
+  ? num % 36 + 10 
+  : num).toString(36);
 const getNum = a => a.charCodeAt(0) - 97;
 
 function createAcceleroChartCfg(chartId) {
-
-  const colors = [ 
-          'rgba(255, 255, 0, 0.6)', // yellow ela
-          'rgba(255, 0, 181, 0.6)', // shocking pink
-          'rgba(0, 152, 255, 0.6)', // indigo lulu 
-          'rgba(0, 255, 0, 0.6)',   // green flex
-          'rgba(255, 206, 86, 0.6)' // okra
-  ];
-
-  const datasets = [ ...Array(chartParamLengths[chartId]).keys() ].map( (x, i) => 
+  // create as many datasets as the param length of the respective chart.
+  const datasets = [ ...Array(CHART_CONFIGS[chartId].paramLength).keys() ].map( (i) => 
     ({
-      label: getAlpha(i + 23),
+      // Array index is mapped to an alphanumeric parameter name alphabetically:
+      // 0 => 'x', 1 => 'y', 2 => 'z', 3 => 'a', 4 => 'b', ... etc.
+      label: indexToAlphaNumeric(i + 23),
       data: [],
-      backgroundColor: [
-        colors[i % colors.length]
-      ]
-    })
+      backgroundColor: CHART_COLORS[i % CHART_COLORS.length]
+      })
   );
 
   return {
@@ -379,7 +324,7 @@ function createAcceleroChartCfg(chartId) {
       responsive: true,
       maintainAspectRatio: true,
       animation: {
-        //duration: 200,
+        //duration: 10000,
         duration: 0,
         easing: 'linear'
       },
@@ -394,17 +339,14 @@ function createAcceleroChartCfg(chartId) {
       },
       scales: {
         yAxes: [{
-          ticks: tickConfigs[chartId]
+          ticks: CHART_CONFIGS[chartId].ticks
         }],
         xAxes: [{
           type: 'realtime',
           realtime: {         // per-axis options
-            duration: 20000,    // data in the past 20000 ms will be displayed
-            //refresh: 30,      // onRefresh callback will be called every 1000 ms
-            delay: 200,        // delay of 1000 ms, so upcoming values are known before plotting a line
-            pause: false,       // chart is not paused
-            //ttl: undefined,     // data will be automatically deleted as it disappears off the chart
-            ttl: undefined     // data will be automatically deleted as it disappears off the chart
+            //duration: 10000,    // data in the past 20000 ms will be displayed
+            delay: 100,        // delay of 1000 ms, so upcoming values are known before plotting a line
+            pause: false       // chart is not paused
           },
         }]
       }
@@ -438,5 +380,4 @@ function getStatsChartCfg() {
     }
   }
 }
-
 
