@@ -6,7 +6,8 @@
     <link rel="icon" href="/visual/favicon.ico" />
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.7.0/dist/Chart.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-streaming@1.8/dist/chartjs-plugin-streaming.min.js"></script>
 
     <script src="app.js"></script>
     <style>
@@ -25,7 +26,13 @@
       timestamp: <span id="stamp"></span>
     </div>
     <div class="container">
+      <canvas id="lin-acc-chart"></canvas>
+      <br>
       <canvas id="accelero-chart"></canvas>
+      <br>
+      <canvas id="gyro-chart"></canvas>
+      <br>
+      <canvas id="light-chart"></canvas>
       <br>
       <canvas id="stat-chart"></canvas>
     </div>
