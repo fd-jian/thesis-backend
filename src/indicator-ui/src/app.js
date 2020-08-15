@@ -189,12 +189,11 @@ function handleStatsUpdate(stats) {
       default:
         console.log("unknown dataset mentioned.")
     }
+    document.getElementById(VIEW_IDS.countPerSec).innerHTML = stats.countPerSecond;
+    document.getElementById(VIEW_IDS.count).innerHTML = stats.count;
+    document.getElementById(VIEW_IDS.timeSumSec).innerHTML = stats.timeSumSec;
+    document.getElementById(VIEW_IDS.time).innerHTML = stats.time;
   });
-
-  document.getElementById(VIEW_IDS.countPerSec).innerHTML = stats.countPerSec;
-  document.getElementById(VIEW_IDS.count).innerHTML = stats.count;
-  document.getElementById(VIEW_IDS.timeSumSec).innerHTML = stats.timeSumSec;
-  document.getElementById(VIEW_IDS.time).innerHTML = stats.time;
 }
 
 function updateChart(chartId, record, callback) {
