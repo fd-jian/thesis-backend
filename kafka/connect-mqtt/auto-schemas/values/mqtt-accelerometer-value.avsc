@@ -4,6 +4,7 @@
     "name": "AccelerometerRecord",
     "fields": [
       {"name": "time", "type": "long"},
+      {"name": "sessionId", "type": "string"},
       {"name": "values",  "type": 
           {
               "type": "array",
