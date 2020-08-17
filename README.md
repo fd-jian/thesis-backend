@@ -1,11 +1,10 @@
 # Engagement Detection System
 
-System to detect students' engagement built with kafka and spring boot
+System to detect students' engagement built with kafka and spring boot.
 
 ## Structure
 
-Image sources are added as git submodules, but images will be pushed to a
-docker repository at some point. 
+Image sources are added as git submodules, but images will be pushed to a docker repository at some point.
 The idea is to be able to 
   a) run the project with images from the repos with no build necessary.
   b) make changes to images and rebuild within this very project.
@@ -29,7 +28,7 @@ In order to have a submodule summary when executing “git status”, execute th
 $ git config --global status.submoduleSummary true
 ```
 
-### Build locally
+### Running Locally
 
 For the initial launch, it is enough to run:
 
@@ -64,6 +63,10 @@ This command will **not** leave you with all containers running on the most
 recent images you have locally.
 It should only -- if ever -- be used as a convenience command to quickly
 rebuild a certain container during development.
+
+### Running on Production Server
+
+The docker-compose file is using environmental variables to configure the docker containers. Each variable has a default value used to run the project locally. In case you would like to run the project on your server you need to provide docker-compose with other variable values. One option is to modify the values in the file 'production.env' and rename it to .env on the server. Other option are listed here: https://docs.docker.com/compose/environment-variables/
 
 ### (TODO) Use latest repo images
 

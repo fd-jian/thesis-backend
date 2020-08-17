@@ -8,29 +8,29 @@ services:
       - /mosquitto/log
       - ./mosquitto/config:/mosquitto/config:ro
       - ./mosquitto/passwd:/mosquitto/passwd:ro
-      - ./certs:/etc/mosquitto/certs:ro
+      - ${CERTS_DIR:-./certs/default}:/etc/mosquitto/certs:ro
     ports:
       - "8883:8883" # TODO: username/password auth
 
   mqtt-client:
     image: efrecon/mqtt-client
-    command: sub -h mosquitto -p 8883 -u user -P changeme --cafile /opt/certs/ca.crt -t "#" -v 
+    command: sub -h ${MQTT_SERVER:-mosquitto} -p 8883 -u ${MQTT_SERVER_USERNAME:-user} -P ${MQTT_SERVER_PASSWORD:-changeme} --cafile /opt/certs/ca.crt -t "#" -v 
     volumes:
-      - ./certs/ca.crt:/opt/certs/ca.crt:ro
+      - ${CERTS_DIR:-./certs/default}/ca.crt:/opt/certs/ca.crt:ro
     depends_on:
       - mosquitto
 
-  proxy:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-    volumes:
-      - ./proxy/conf/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./proxy/conf/conf.d:/etc/nginx/conf.d:ro
-      - ./proxy/html:/usr/share/nginx/html
-    depends_on:
-      - indicator-service
-      - indicator-ui
+#  proxy:
+#    image: nginx:alpine
+#    ports:
+#      - "80:80"
+#    volumes:
+#      - ./proxy/conf/nginx.conf:/etc/nginx/nginx.conf:ro
+#      - ./proxy/conf/conf.d:/etc/nginx/conf.d:ro
+#      - ./proxy/html:/usr/share/nginx/html
+#    depends_on:
+#      - indicator-service
+#      - indicator-ui
 
   indicator-ui:
     image: nginx:alpine
@@ -38,6 +38,8 @@ services:
       - ./src/indicator-ui/src:/usr/share/nginx/html/visual:ro
       - ./indicator-ui/conf/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./indicator-ui/conf/conf.d:/etc/nginx/conf.d:ro
+    ports:
+      - "127.0.0.1:10080:80"
 
   indicator-service:
     image: indicator-service
@@ -47,8 +49,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: snapshot
       TZ: "Europe/Berlin"
-    #ports:
-      #- "8002:8000" # debug port disabled for security reasons in prod
+    ports:
+      - "127.0.0.1:18080:8080"
 
   activity-detector:
     image: activity-detector
@@ -58,14 +60,14 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: snapshot
       TZ: "Europe/Berlin"
-    #ports:
-      #- "8001:8000" # debug port disabled for security reasons in prod
+    ports:
+      - "127.0.0.1:8001:8000"
 
   zookeeper:
     image: confluentinc/cp-zookeeper:5.2.1
     hostname: zookeeper
-    #ports:
-      #- "2181:2181" # port disabled for security reasons in prod 
+    ports:
+      - "127.0.0.1:2181:2181"  
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       TZ: "Europe/Berlin"
@@ -76,9 +78,9 @@ services:
   kafka:
     image: confluentinc/cp-kafka:latest
     hostname: kafka
-    #ports: # port disabled for security reasons in prod 
-      #- "9092:9092"
-      #- "29092:29092"
+    ports: # port disabled for security reasons in prod 
+      - "127.0.0.1:9092:9092"
+      - "127.0.0.1:29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
@@ -87,8 +89,8 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       TZ: "Europe/Berlin"
-    #volumes:
-      #- ./kafka/data:/var/lib/kafka/data
+#    volumes:
+#      - ./kafka/data:/var/lib/kafka/data
     depends_on:
       - zookeeper
 
@@ -99,8 +101,8 @@ services:
     depends_on:
       - zookeeper
       - kafka
-    #ports: # TODO: how to secure in production?
-      #- "8081:8081"
+    ports: # TODO: how to secure in production?
+      - "127.0.0.1:8081:8081"
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
@@ -108,8 +110,8 @@ services:
   kafka-connect:
     image: confluentinc/cp-kafka-connect:latest
     hostname: kafka-connect
-    #ports: # port disabled for security reasons in prod 
-        #- "28083:28083"
+    ports: # port disabled for security reasons in prod 
+      - "127.0.0.1:28083:28083"
     environment:
       CONNECT_BOOTSTRAP_SERVERS: kafka:29092
       CONNECT_REST_PORT: 28083
@@ -130,7 +132,7 @@ services:
       TZ: "Europe/Berlin"
     volumes:
         - kafka-plugins:/usr/share/java/kafka-extra
-        - ./certs/ca.crt:/etc/kafka/certs/ca.crt:ro
+        - ${CERTS_DIR:-./certs/default}/ca.crt:/etc/kafka/certs/ca.crt:ro
     depends_on:
         - kafka
         - kafka-connect-mqtt-lib
