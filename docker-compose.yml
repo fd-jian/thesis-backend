@@ -47,6 +47,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: snapshot
       TZ: "Europe/Berlin"
+      USERNAME: user
+      PASSWORD: "$$2b$$10$$fuBWYJU.JoaSeAaM7itjUuCkw.69FUSKKntWlE6JidcD8i4zrDjY2"
     #ports:
       #- "8002:8000" # debug port disabled for security reasons in prod
 
