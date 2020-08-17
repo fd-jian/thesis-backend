@@ -12,6 +12,23 @@ The idea is to be able to
 
 ## Usage
 
+### GIT Checkout
+
+There are three independent Git repositories integrated into this project. Those are called git submodules. In order to pull these repositories you need to use these commands:
+
+```bash
+git clone /url/to/repo/with/submodules
+git submodule init
+git submodule update
+```
+https://www.atlassian.com/git/tutorials/git-submodule
+
+In order to have a submodule summary when executing “git status”, execute the “git config” command and add the “status.submoduleSummary” option.
+
+```bash
+$ git config --global status.submoduleSummary true
+```
+
 ### Build locally
 
 For the initial launch, it is enough to run:
