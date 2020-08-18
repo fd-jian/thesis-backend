@@ -1,0 +1,19 @@
+{
+  "type" : "record",
+  "name" : "SensorRecord",
+  "namespace" : "de.dipf.edutec.thriller.experiencesampling",
+  "fields" : [ {
+    "name" : "time",
+    "type" : "long"
+  }, {
+    "name" : "sessionId",
+    "type" : "string",
+    "default" : ""
+  }, {
+    "name" : "values",
+    "type" : {
+      "type" : "array",
+      "items" : "float"
+    }
+  } ]
+}

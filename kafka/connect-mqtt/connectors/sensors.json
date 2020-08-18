@@ -1,5 +1,5 @@
 {
-    "name": "mqtt-accelerometer",
+    "name": "mqtt-sensors",
     "config": {
       "connector.class": "com.evokly.kafka.connect.mqtt.MqttSourceConnector",
       "processing.message_processor": "com.evokly.kafka.connect.mqtt.sample.AvroProcessor",
