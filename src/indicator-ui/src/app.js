@@ -61,7 +61,7 @@ function connect() {
   stompClient.connect({}, function (frame) {
     setConnected(true);
     console.log('Connected: ' + frame);
-    stompClient.subscribe('/topic/stats', function (stats) {
+    stompClient.subscribe('/topic/stats/72242ffe-f1a7-4a13-9698-86c13ea85aad', function (stats) {
       handleStatsUpdate(JSON.parse(stats.body));
     });
 

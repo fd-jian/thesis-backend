@@ -35,22 +35,22 @@ const CHART_CONF = {
   [LIN_ACC_CHART]: { 
     ...DEFAULT_TICK_CONF,
     paramLength: 3,
-    topicName: '/topic/linear-acceleration'
+    topicName: '/topic/linear-acceleration/72242ffe-f1a7-4a13-9698-86c13ea85aad'
   },
   [ACCELERO_CHART]: { 
     ...DEFAULT_TICK_CONF,
     paramLength: 3,
-    topicName: '/topic/accelerometer'
+    topicName: '/topic/accelerometer/72242ffe-f1a7-4a13-9698-86c13ea85aad'
   },
   [GYRO_CHART]: { 
     ...DEFAULT_TICK_CONF,
     paramLength: 3,
-    topicName: '/topic/gyroscope'
+    topicName: '/topic/gyroscope/72242ffe-f1a7-4a13-9698-86c13ea85aad'
   },
   [LIGHT_CHART]: { 
     ...LARGE_TICK_CONF,
     paramLength: 1,
-    topicName: '/topic/light'
+    topicName: '/topic/light/72242ffe-f1a7-4a13-9698-86c13ea85aad'
   },
   [STATS_CHART]: {
     ...LARGE_TICK_CONF,
