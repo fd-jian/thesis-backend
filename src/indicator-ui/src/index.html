@@ -14,9 +14,17 @@
       .disabled {
         background-color: darkgray;
       }
+
+      #user-ids {
+        width: 20rem;
+      }
     </style>
   </head>
   <body>
+      <label for="user-id">User ID:</label>
+    <select width="400px" name="user-id" id="user-ids" disabled="disabled">
+      <option>--</option>
+    </select>
     <div id="buttons"></div>
     <div id="stats">
       count/sec: <span id="count_sec"></span>

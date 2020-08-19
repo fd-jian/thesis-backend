@@ -35,22 +35,22 @@ const CHART_CONF = {
   [LIN_ACC_CHART]: { 
     ...DEFAULT_TICK_CONF,
     paramLength: 3,
-    topicName: '/topic/linear-acceleration/72242ffe-f1a7-4a13-9698-86c13ea85aad'
+    topicName: '/topic/linear-acceleration'
   },
   [ACCELERO_CHART]: { 
     ...DEFAULT_TICK_CONF,
     paramLength: 3,
-    topicName: '/topic/accelerometer/72242ffe-f1a7-4a13-9698-86c13ea85aad'
+    topicName: '/topic/accelerometer'
   },
   [GYRO_CHART]: { 
     ...DEFAULT_TICK_CONF,
     paramLength: 3,
-    topicName: '/topic/gyroscope/72242ffe-f1a7-4a13-9698-86c13ea85aad'
+    topicName: '/topic/gyroscope'
   },
   [LIGHT_CHART]: { 
     ...LARGE_TICK_CONF,
     paramLength: 1,
-    topicName: '/topic/light/72242ffe-f1a7-4a13-9698-86c13ea85aad'
+    topicName: '/topic/light'
   },
   [STATS_CHART]: {
     ...LARGE_TICK_CONF,
@@ -118,10 +118,10 @@ const BUTTON_IDS = {
 };
 
 const BUTTON_TEXTS = {
-  [BUTTON_IDS.connect]: 'CONNECT',
-  [BUTTON_IDS.disconnect]: 'DISCONNECT',
-  [BUTTON_IDS.pause]: 'PAUSE_GRAPH',
-  [BUTTON_IDS.resume]: 'RESUME_GRAPH',
+  [BUTTON_IDS.connect]: 'Connect',
+  [BUTTON_IDS.disconnect]: 'Disconnect',
+  [BUTTON_IDS.pause]: 'Pause Graph',
+  [BUTTON_IDS.resume]: 'Resume Graph',
 }
 
 const VIEW_IDS = {
