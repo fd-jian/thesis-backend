@@ -34,10 +34,10 @@ let connected = false;
 const idSelect = document.getElementById("user-ids");
 
 window.onload = function() {
+  connect();
   idSelect.addEventListener("change", (e) => {
     const val = e.target.value;
     if (e.target.value !== "--") {
-      disconnect();
       connect(e.target.value);
     }
   });
@@ -120,25 +120,53 @@ function connect(userId) {
 function connectFn(userId) {
   return () => {
     if (connected) {
-      return;
+      disconnect();
     }
     const socket = new SockJS('/api/visual/gs-guide-websocket');
     stompClient = Stomp.over(socket);
     stompClient.debug = null; // mute console logs
     stompClient.connect({}, function (frame) {
-      setConnected(true);
-      console.log('Connected: ' + frame);
-      stompClient.subscribe(`/topic/stats/${userId}`, function (stats) {
-        handleStatsUpdate(JSON.parse(stats.body));
+
+      stompClient.subscribe('/topic/user-ids', function (userIdsMessage) {
+        const userIds = JSON.parse(userIdsMessage.body)
+        console.log(userIds);
+        userIds.ids.forEach(id => {
+          const curIds = []
+          for (let option of idSelect.getElementsByTagName("OPTION")) {
+            curIds.push(option.value);
+          }
+          if (curIds.includes(id)) {
+            return;
+          }
+          idSelect.disabled = false;
+          const option = document.createElement('OPTION')
+          option.value = id; 
+          option.innerHTML = id;
+          idSelect.appendChild(option);
+          console.log(idSelect.value);
+          if (idSelect.value === "--") {
+            console.log("value is --, connecting");
+            idSelect.value = id;
+            connect(id);
+          }
+        });
       });
 
-      SENSOR_CHARTS
-        .map(chartId => [ chartId, CHART_CONF[chartId] ])
-        .forEach(([chartId, config]) => {
-          stompClient.subscribe(`${config.topicName}/${userId}`, function (record) {
-            handleSensorUpdate(JSON.parse(record.body), chartId);
-          });
+      if (userId) {
+        setConnected(true);
+        console.log('Connected: ' + frame);
+        stompClient.subscribe(`/topic/stats/${userId}`, function (stats) {
+          handleStatsUpdate(JSON.parse(stats.body));
         });
+
+        SENSOR_CHARTS
+          .map(chartId => [ chartId, CHART_CONF[chartId] ])
+          .forEach(([chartId, config]) => {
+            stompClient.subscribe(`${config.topicName}/${userId}`, function (record) {
+              handleSensorUpdate(JSON.parse(record.body), chartId);
+            });
+          });
+      }
 
     });
 
