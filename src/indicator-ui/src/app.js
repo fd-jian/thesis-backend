@@ -29,8 +29,45 @@ const chartData = {
 
 let stompClient = null;
 let isRunning = false;
+let connected = false;
+
+const idSelect = document.getElementById("user-ids");
 
 window.onload = function() {
+  idSelect.addEventListener("change", (e) => {
+    const val = e.target.value;
+    if (e.target.value !== "--") {
+      disconnect();
+      connect(e.target.value);
+    }
+  });
+
+  const http = new XMLHttpRequest();
+  const url = "/api/visual/users";
+
+  http.open("GET", url);
+  http.onreadystatechange = successHandler(http, (status, responseData) => {
+    const ids = responseData.ids;
+    if(!ids || ids.length == 0) { 
+      return 
+    }
+    
+    connect(ids[0]);
+    idSelect.disabled = false;
+
+    ids.forEach(userId => {
+      const option = document.createElement('OPTION')
+      option.value = userId; 
+      option.innerHTML = userId;
+      idSelect.appendChild(option);
+    });
+
+    idSelect.value = ids[0];
+
+  });
+
+  http.send();
+
   createButtons();
 
   chartsById = { 
@@ -42,8 +79,6 @@ window.onload = function() {
       document.getElementById(STATS_CHART_ID).getContext('2d'), 
       getStatsChartCfg())
   };
-    
-  connect();
 }
 
 window.addEventListener('keypress', function(e) {
@@ -54,34 +89,67 @@ window.addEventListener('keypress', function(e) {
   }
 });
 
-function connect() {
-  const socket = new SockJS('/api/visual/gs-guide-websocket');
-  stompClient = Stomp.over(socket);
-  stompClient.debug = null; // mute console logs
-  stompClient.connect({}, function (frame) {
-    setConnected(true);
-    console.log('Connected: ' + frame);
-    stompClient.subscribe('/topic/stats', function (stats) {
-      handleStatsUpdate(JSON.parse(stats.body));
-    });
+function completeHandler(http, cb, ecb) {
+  return mainHandler(http, (status, responseText) => { 
+    cb(http.status, JSON.parse(http.responseText));
+  }, (status, responseText) => {
+    ecb(http.status, JSON.parse(http.responseText));
+  });
+}
 
-    SENSOR_CHARTS
-      .map(chartId => [ chartId, CHART_CONF[chartId] ])
-      .forEach(([chartId, config]) => {
-        stompClient.subscribe(config.topicName, function (record) {
-          handleSensorUpdate(JSON.parse(record.body), chartId);
-        });
+function successHandler(http, cb) {
+  return completeHandler(http, cb, (status, responseText) => {})
+}
+
+function mainHandler(http, cb, ecb) {
+  return (e) => {
+    if (http.readyState === 4) {
+      if (http.status >= 200 && http.status < 300) {
+        cb(http.status, http.responseText)
+      } else {
+        ecb(http.status, http.responseText)
+      }
+    }
+  }
+}
+
+function connect(userId) {
+  connectFn(userId)();
+}
+
+function connectFn(userId) {
+  return () => {
+    if (connected) {
+      return;
+    }
+    const socket = new SockJS('/api/visual/gs-guide-websocket');
+    stompClient = Stomp.over(socket);
+    stompClient.debug = null; // mute console logs
+    stompClient.connect({}, function (frame) {
+      setConnected(true);
+      console.log('Connected: ' + frame);
+      stompClient.subscribe(`/topic/stats/${userId}`, function (stats) {
+        handleStatsUpdate(JSON.parse(stats.body));
       });
 
-  });
+      SENSOR_CHARTS
+        .map(chartId => [ chartId, CHART_CONF[chartId] ])
+        .forEach(([chartId, config]) => {
+          stompClient.subscribe(`${config.topicName}/${userId}`, function (record) {
+            handleSensorUpdate(JSON.parse(record.body), chartId);
+          });
+        });
 
-  socket.onclose = function () {
-    console.log("connection closed, reconnecting in 3s");
-    setConnected(false);
-    setTimeout(connect, 3000);
+    });
+
+    socket.onclose = function () {
+      console.log("connection closed, reconnecting in 3s");
+      setConnected(false);
+      setTimeout(connectFn(userId), 3000);
+    }
+
+    resume();
   }
-
-  resume();
 }
 
 function disconnect() {
@@ -256,6 +324,7 @@ function pause() {
 }
 
 function setConnected(conn) {
+  connected = conn;
   const btnCon = document.getElementById(BUTTON_IDS.connect);
   const btnDisc = document.getElementById(BUTTON_IDS.disconnect);
   const btnPs = document.getElementById(BUTTON_IDS.pause);
@@ -276,7 +345,7 @@ function setConnected(conn) {
 function createButtons() {
   createButton(BUTTON_IDS.connect, BUTTON_TEXTS[BUTTON_IDS.connect], function () {
     console.log("connect btn")
-    connect();
+    connect(idSelect.value);
   });
   createButton(BUTTON_IDS.disconnect, BUTTON_TEXTS[BUTTON_IDS.disconnect], function () {
     console.log("disconnect btn")

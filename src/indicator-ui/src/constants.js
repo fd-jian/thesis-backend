@@ -118,10 +118,10 @@ const BUTTON_IDS = {
 };
 
 const BUTTON_TEXTS = {
-  [BUTTON_IDS.connect]: 'CONNECT',
-  [BUTTON_IDS.disconnect]: 'DISCONNECT',
-  [BUTTON_IDS.pause]: 'PAUSE_GRAPH',
-  [BUTTON_IDS.resume]: 'RESUME_GRAPH',
+  [BUTTON_IDS.connect]: 'Connect',
+  [BUTTON_IDS.disconnect]: 'Disconnect',
+  [BUTTON_IDS.pause]: 'Pause Graph',
+  [BUTTON_IDS.resume]: 'Resume Graph',
 }
 
 const VIEW_IDS = {
