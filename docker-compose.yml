@@ -14,7 +14,7 @@ services:
 
   mqtt-client:
     image: efrecon/mqtt-client
-    command: sub -h ${MQTT_SERVER:-mosquitto} -p 8883 -u ${MQTT_SERVER_USERNAME:-user} -P ${MQTT_SERVER_PASSWORD:-changeme} --cafile /opt/certs/ca.crt -t "#" -v 
+    command: sub -h mosquitto -p 8883 -u ${MQTT_SERVER_USERNAME:-user} -P ${MQTT_SERVER_PASSWORD:-changeme} --cafile /opt/certs/ca.crt -t "#" -v 
     volumes:
       - ${CERTS_DIR:-./certs/default}/ca.crt:/opt/certs/ca.crt:ro
     depends_on:
@@ -56,7 +56,7 @@ services:
       PASSWORD: "$$2b$$10$$fuBWYJU.JoaSeAaM7itjUuCkw.69FUSKKntWlE6JidcD8i4zrDjY2"
       #_JAVA_OPTIONS: -Dlogging.level.org.springframework=DEBUG?
     ports:
-      - "127.0.0.1:18002:8000" # debug port disabled for security reasons in prod
+      - "127.0.0.1:18080:8080"
 
   activity-detector:
     image: activity-detector
