@@ -142,3 +142,26 @@ Check the status of a Kafka Connect connector:
 curl -s "http://localhost:28083/connectors?expand=info&expand=status" | jq '. | to_entries[] | [ .value.info.type, .key, .value.status.connector.state,.value.status.tasks[].state,.value.info.config."connector.class"]|join(":|:")' | column -s : -t| sed 's/\"//g'| sort
 ```
 
+## Kafka Connect
+Get a list of connector running in the Kafka system.
+```bash
+curl -X GET http://localhost:28083/connectors/
+```
+
+# Bugs
+
+## Kafka Connect 
+
+```bash
+[2020-08-20 14:58:45,671] ERROR MQTT connection lost! (com.evokly.kafka.connect.mqtt.MqttSourceConnector)
+kafka-connect_1           | Connection lost (32109) - java.io.EOFException
+kafka-connect_1           | 	at org.eclipse.paho.client.mqttv3.internal.CommsReceiver.run(CommsReceiver.java:197)
+kafka-connect_1           | 	at java.lang.Thread.run(Thread.java:748)
+kafka-connect_1           | Caused by: java.io.EOFException
+kafka-connect_1           | 	at java.io.DataInputStream.readByte(DataInputStream.java:267)
+kafka-connect_1           | 	at org.eclipse.paho.client.mqttv3.internal.wire.MqttInputStream.readMqttWireMessage(MqttInputStream.java:92)
+kafka-connect_1           | 	at org.eclipse.paho.client.mqttv3.internal.CommsReceiver.run(CommsReceiver.java:137)
+kafka-connect_1           | 	... 1 mor
+```
+Possible two kafka connect instances with same Client ID running. 
+
