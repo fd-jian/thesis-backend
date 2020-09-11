@@ -14,7 +14,7 @@ services:
 
   mqtt-client:
     image: efrecon/mqtt-client
-    command: sub -h mosquitto -p 8883 -u ${MQTT_SERVER_USERNAME:-user} -P ${MQTT_SERVER_PASSWORD:-changeme} --cafile /opt/certs/ca.crt -t "#" -v 
+    command: sub -h mosquitto -p 8883 -u ${MQTT_SERVER_USERNAME:-user} -P ${MQTT_SERVER_PASSWORD:-changeme} --cafile /opt/certs/ca.crt -t "#" -v
     volumes:
       - ${CERTS_DIR:-./certs/default}/ca.crt:/opt/certs/ca.crt:ro
     depends_on:
@@ -74,9 +74,16 @@ services:
     image: confluentinc/cp-zookeeper:5.2.1
     hostname: zookeeper
     ports:
-      - "127.0.0.1:2181:2181"  
+      - "127.0.0.1:2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
+      #KAFKA_JMX_PORT: 49999
+      #KAFKA_JMX_HOSTNAME: localhost
+      #KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote.local.only=false
+      #-Dcom.sun.management.jmxremote.authenticate=false
+      #-Dcom.sun.management.jmxremote.rmi.port=49999
+      #-Dcom.sun.management.jmxremote.port=49999
+      #-Dcom.sun.management.jmxremote.ssl=false"
       TZ: "Europe/Berlin"
     #volumes:
       #- ./zookeeper/data:/var/lib/zookeeper/data
@@ -85,7 +92,7 @@ services:
   kafka:
     image: confluentinc/cp-kafka:latest
     hostname: kafka
-    ports: # port disabled for security reasons in prod 
+    ports: # port disabled for security reasons in prod
       - "127.0.0.1:9092:9092"
       - "127.0.0.1:29092:29092"
     environment:
@@ -95,6 +102,13 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      #KAFKA_JMX_PORT: 49999
+      #KAFKA_JMX_HOSTNAME: localhost
+      #KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote.local.only=false
+      #-Dcom.sun.management.jmxremote.authenticate=false
+      #-Dcom.sun.management.jmxremote.rmi.port=49999
+      #-Dcom.sun.management.jmxremote.port=49999
+      #-Dcom.sun.management.jmxremote.ssl=false"
       TZ: "Europe/Berlin"
 #    volumes:
 #      - ./kafka/data:/var/lib/kafka/data
@@ -115,9 +129,10 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
 
   kafka-connect:
-    image: confluentinc/cp-kafka-connect:latest
+    image: kafka-connect-prometheus
+    build: ./src/kafka-connect-prometheus
     hostname: kafka-connect
-    ports: # port disabled for security reasons in prod 
+    ports: # port disabled for security reasons in prod
       - "127.0.0.1:28083:28083"
     environment:
       CONNECT_BOOTSTRAP_SERVERS: kafka:29092
@@ -136,6 +151,14 @@ services:
       CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
       CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
       CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
+      KAFKA_OPTS: -javaagent:/usr/app/jmx_prometheus_javaagent.jar=7071:/usr/app/prom-jmx-agent-config.yml -Djava.util.logging.config.file=/usr/app/logging.properties
+      #KAFKA_JMX_PORT: 49999
+      #KAFKA_JMX_HOSTNAME: localhost
+      #KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote.local.only=false
+      #-Dcom.sun.management.jmxremote.authenticate=false
+      #-Dcom.sun.management.jmxremote.rmi.port=49999
+      #-Dcom.sun.management.jmxremote.port=49999
+      #-Dcom.sun.management.jmxremote.ssl=false"
       TZ: "Europe/Berlin"
     volumes:
         - kafka-plugins:/usr/share/java/kafka-extra
@@ -143,6 +166,21 @@ services:
     depends_on:
         - kafka
         - kafka-connect-mqtt-lib
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      #- 9090:9090/tcp
+      - 9090:9090
+    volumes:
+      - ./prometheus/conf:/etc/prometheus
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
 
   # copies contained connect jars from build to kafka-plugin volume and shuts down
   kafka-connect-mqtt-lib:
@@ -166,5 +204,35 @@ services:
       - ./kafka/connect-mqtt/auto-schemas:/data/auto-schemas:ro
       #- ./activity-detector/src/main/avro/values/accelerometer.avsc:/data/schemas/mqtt-accelerometer.avsc:ro
 
+  redis:
+    image: redis:latest
+    command: redis-server
+    ports:
+      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:6380:6380"
+
+  web:
+    build: ./src/experience-sampling-service-backend
+    command: python manage.py runserver 0.0.0.0:8002
+    ports:
+      - "127.0.0.1:18002:8002"
+#  worker_channels:
+#
+#    build: ./src/experience-sampling-service-backend/experiencesampling
+#    command: python manage.py runworker channels
+#    volumes:
+#      - .:/code
+#    links:
+#      - redis
+
+  channels:
+    build: ./src/experience-sampling-service-backend
+    command: daphne -p 8001 experiencesampling.asgi:application
+    ports:
+      - "127.0.0.1:18001:8001"
+    links:
+     - redis
+
 volumes:
   kafka-plugins:
+  grafana-storage:
