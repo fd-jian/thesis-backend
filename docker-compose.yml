@@ -73,8 +73,17 @@ services:
     hostname: zookeeper
     #ports:
       #- "2181:2181" # port disabled for security reasons in prod 
+    ports:
+      - "59999:49999"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
+      #KAFKA_JMX_PORT: 49999
+      #KAFKA_JMX_HOSTNAME: localhost
+      #KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote.local.only=false
+      #-Dcom.sun.management.jmxremote.authenticate=false
+      #-Dcom.sun.management.jmxremote.rmi.port=49999
+      #-Dcom.sun.management.jmxremote.port=49999
+      #-Dcom.sun.management.jmxremote.ssl=false"
       TZ: "Europe/Berlin"
     #volumes:
       #- ./zookeeper/data:/var/lib/zookeeper/data
@@ -86,6 +95,8 @@ services:
     #ports: # port disabled for security reasons in prod 
       #- "9092:9092"
       #- "29092:29092"
+    ports:
+      - "39999:49999"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
@@ -93,6 +104,13 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      #KAFKA_JMX_PORT: 49999
+      #KAFKA_JMX_HOSTNAME: localhost
+      #KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote.local.only=false
+      #-Dcom.sun.management.jmxremote.authenticate=false
+      #-Dcom.sun.management.jmxremote.rmi.port=49999
+      #-Dcom.sun.management.jmxremote.port=49999
+      #-Dcom.sun.management.jmxremote.ssl=false"
       TZ: "Europe/Berlin"
     #volumes:
       #- ./kafka/data:/var/lib/kafka/data
@@ -113,10 +131,13 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
 
   kafka-connect:
-    image: confluentinc/cp-kafka-connect:latest
+    image: kafka-connect-prometheus
+    build: ./src/kafka-connect-prometheus
     hostname: kafka-connect
     #ports: # port disabled for security reasons in prod 
         #- "28083:28083"
+    #ports:
+      #- "49999:49999"
     environment:
       CONNECT_BOOTSTRAP_SERVERS: kafka:29092
       CONNECT_REST_PORT: 28083
@@ -134,6 +155,14 @@ services:
       CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
       CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
       CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
+      KAFKA_OPTS: -javaagent:/usr/app/jmx_prometheus_javaagent.jar=7071:/usr/app/prom-jmx-agent-config.yml -Djava.util.logging.config.file=/usr/app/logging.properties
+      #KAFKA_JMX_PORT: 49999
+      #KAFKA_JMX_HOSTNAME: localhost
+      #KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote.local.only=false
+      #-Dcom.sun.management.jmxremote.authenticate=false
+      #-Dcom.sun.management.jmxremote.rmi.port=49999
+      #-Dcom.sun.management.jmxremote.port=49999
+      #-Dcom.sun.management.jmxremote.ssl=false"
       TZ: "Europe/Berlin"
     volumes:
         - kafka-plugins:/usr/share/java/kafka-extra
@@ -141,6 +170,21 @@ services:
     depends_on:
         - kafka
         - kafka-connect-mqtt-lib
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      #- 9090:9090/tcp
+      - 9090:9090
+    volumes:
+      - ./prometheus/conf:/etc/prometheus
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
 
   # copies contained connect jars from build to kafka-plugin volume and shuts down
   kafka-connect-mqtt-lib:
@@ -195,3 +239,4 @@ services:
 
 volumes:
   kafka-plugins:
+  grafana-storage:
