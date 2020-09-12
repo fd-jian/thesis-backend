@@ -3,4 +3,5 @@
 /zookeeper/data
 /zookeeper/log
 certs/
-.env
+/*.env*
+.idea

@@ -21,21 +21,6 @@ services:
     depends_on:
       - mosquitto
 
-  proxy:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./proxy/conf/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./proxy/conf/conf.d:/etc/nginx/conf.d:ro
-      - ./proxy/html:/usr/share/nginx/html
-      - ./certs/default/server.crt:/etc/ssl/certs/server.crt:ro
-      - ./certs/default/server.key:/etc/ssl/private/server.key:ro
-    depends_on:
-      - indicator-service
-      - indicator-ui
-
   indicator-ui:
     image: nginx:alpine
     volumes:
@@ -77,13 +62,6 @@ services:
       - "127.0.0.1:2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
-      #KAFKA_JMX_PORT: 49999
-      #KAFKA_JMX_HOSTNAME: localhost
-      #KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote.local.only=false
-      #-Dcom.sun.management.jmxremote.authenticate=false
-      #-Dcom.sun.management.jmxremote.rmi.port=49999
-      #-Dcom.sun.management.jmxremote.port=49999
-      #-Dcom.sun.management.jmxremote.ssl=false"
       TZ: "Europe/Berlin"
     #volumes:
       #- ./zookeeper/data:/var/lib/zookeeper/data
@@ -102,13 +80,6 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      #KAFKA_JMX_PORT: 49999
-      #KAFKA_JMX_HOSTNAME: localhost
-      #KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote.local.only=false
-      #-Dcom.sun.management.jmxremote.authenticate=false
-      #-Dcom.sun.management.jmxremote.rmi.port=49999
-      #-Dcom.sun.management.jmxremote.port=49999
-      #-Dcom.sun.management.jmxremote.ssl=false"
       TZ: "Europe/Berlin"
 #    volumes:
 #      - ./kafka/data:/var/lib/kafka/data
@@ -151,23 +122,13 @@ services:
       CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
       CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
       KAFKA_OPTS: -javaagent:/usr/app/jmx_prometheus_javaagent.jar=7071:/usr/app/prom-jmx-agent-config.yml
-      #KAFKA_JMX_PORT: 49999
-      #KAFKA_JMX_HOSTNAME: localhost
-      #KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote.local.only=false
-      #-Dcom.sun.management.jmxremote.authenticate=false
-      #-Dcom.sun.management.jmxremote.rmi.port=49999
-      #-Dcom.sun.management.jmxremote.port=49999
-      #-Dcom.sun.management.jmxremote.ssl=false"
       TZ: "Europe/Berlin"
     volumes:
-      - kafka-plugins:/usr/share/java/kafka-extra
-      - ${CERTS_DIR:-./certs/default}/ca.crt:/etc/kafka/certs/ca.crt:ro
+        - kafka-plugins:/usr/share/java/kafka-extra
+        - ${CERTS_DIR:-./certs/default}/ca.crt:/etc/kafka/certs/ca.crt:ro
     depends_on:
-      - kafka
-      - kafka-connect-mqtt-lib
-    links:
-      # hack to make thriller url work in development
-      - mosquitto:thriller.edutec.science
+        - kafka
+        - kafka-connect-mqtt-lib
 
   prometheus:
     image: prom/prometheus
