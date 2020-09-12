@@ -15,7 +15,10 @@ services:
   # Can be used to monitor mqtt messages. Also provides pub and sub MQTT client capabilities using `docker-compose exec mqtt-client <COMMAND>`.
   mqtt-client:
     image: efrecon/mqtt-client
-    command: sub -h mosquitto -p 8883 -u ${MQTT_SERVER_USERNAME} -P ${MQTT_SERVER_PASSWORD} --cafile /opt/certs/ca.crt -t "#" -v
+    command: sh -c 'sub -h mosquitto -p 8883 -u ${MQTT_SERVER_USERNAME} -P ${MQTT_SERVER_PASSWORD} --cafile /opt/certs/ca.crt -t "#" -v'
+    environment:
+      MQTT_SERVER_USERNAME: ${MQTT_SERVER_USERNAME}
+      MQTT_SERVER_PASSWORD: ${MQTT_SERVER_PASSWORD}
     volumes:
       - ${CERTS_DIR:-./certs/default}/ca.crt:/opt/certs/ca.crt:ro
     depends_on:
@@ -55,6 +58,7 @@ services:
       TZ: "Europe/Berlin"
       USERNAME: ${INDICATOR_SERVICE_USERNAME}
       # bcrypt hashed pw, e.g. with python using bcrypt package: bcrypt.hashpw("passw".encode('utf-8'), bcrypt.gensalt(rounds=10))
+      # TODO: use cleartext password since it can be provided through docker environment variables.
       PASSWORD: ${INDICATOR_SERVICE_BCRYPT_PW}
       #_JAVA_OPTIONS: -Dlogging.level.org.springframework=DEBUG?
     ports:
