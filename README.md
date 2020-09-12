@@ -1,11 +1,10 @@
 # Engagement Detection System
 
-System to detect students' engagement built with kafka and spring boot
+System to detect students' engagement built with kafka and spring boot.
 
 ## Structure
 
-Image sources are added as git submodules, but images will be pushed to a
-docker repository at some point. 
+Image sources are added as git submodules, but images will be pushed to a docker repository at some point.
 The idea is to be able to 
   a) run the project with images from the repos with no build necessary.
   b) make changes to images and rebuild within this very project.
@@ -29,7 +28,7 @@ In order to have a submodule summary when executing “git status”, execute th
 $ git config --global status.submoduleSummary true
 ```
 
-### Build locally
+### Running Locally
 
 For the initial launch, it is enough to run:
 
@@ -64,6 +63,14 @@ This command will **not** leave you with all containers running on the most
 recent images you have locally.
 It should only -- if ever -- be used as a convenience command to quickly
 rebuild a certain container during development.
+
+### Running on Production Server
+
+The docker-compose file is using environmental variables to configure the docker containers. Each variable has a default value used to run the project locally. In case you would like to run the project on your server you need to provide docker-compose with other variable values. One option is to modify the values in the file 'production.env' and rename it to .env on the server. Other option are listed here: https://docs.docker.com/compose/environment-variables/
+
+```bash
+cp production.env .env
+```
 
 ### (TODO) Use latest repo images
 
@@ -108,4 +115,53 @@ pre-built, third-party services, such as kafka or mosquitto.
   - Library for a custom mqtt connector. If `AvroProcessor` is used, the connector will query the `schema-registry` for a subject with the pattern `mqtt-<connector-name>-value` to deserialize avro data from mqtt messages. `connector-creator` configures this further.
 - connector-creator
   - Creates kafka-connectors on docker-compose startup by using the provides configuration files. If `AvroProcessor` is used in a configuration, it searches for a corresponding avro schema in the configuration location and pushes it to the `schema-registry` before automatically creating the connectors via the kafka-connect REST-API.
+
+# Debugging
+
+## Kafka
+
+Getting a list of all kafka topics:
+
+```bash
+docker-compose exec kafka kafka-topics --zookeeper zookeeper --list
+```
+
+Getting an description of a kafka topic:
+```bash
+kafka-topics --zookeeper zookeeper --describe --topic linear_acceleration
+```
+
+View a Kafka topic in the CLI:
+```bash
+docker-compose exec schema-registry kafka-avro-console-consumer --bootstrap-server kafka:29092 --from-beginning --topic linear_acceleration --property print.key=true
+```
+
+Check the status of a Kafka Connect connector:
+
+```bash
+curl -s "http://localhost:28083/connectors?expand=info&expand=status" | jq '. | to_entries[] | [ .value.info.type, .key, .value.status.connector.state,.value.status.tasks[].state,.value.info.config."connector.class"]|join(":|:")' | column -s : -t| sed 's/\"//g'| sort
+```
+
+## Kafka Connect
+Get a list of connector running in the Kafka system.
+```bash
+curl -X GET http://localhost:28083/connectors/
+```
+
+# Bugs
+
+## Kafka Connect 
+
+```bash
+[2020-08-20 14:58:45,671] ERROR MQTT connection lost! (com.evokly.kafka.connect.mqtt.MqttSourceConnector)
+kafka-connect_1           | Connection lost (32109) - java.io.EOFException
+kafka-connect_1           | 	at org.eclipse.paho.client.mqttv3.internal.CommsReceiver.run(CommsReceiver.java:197)
+kafka-connect_1           | 	at java.lang.Thread.run(Thread.java:748)
+kafka-connect_1           | Caused by: java.io.EOFException
+kafka-connect_1           | 	at java.io.DataInputStream.readByte(DataInputStream.java:267)
+kafka-connect_1           | 	at org.eclipse.paho.client.mqttv3.internal.wire.MqttInputStream.readMqttWireMessage(MqttInputStream.java:92)
+kafka-connect_1           | 	at org.eclipse.paho.client.mqttv3.internal.CommsReceiver.run(CommsReceiver.java:137)
+kafka-connect_1           | 	... 1 mor
+```
+Possible two kafka connect instances with same Client ID running. 
 
