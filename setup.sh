@@ -28,6 +28,6 @@
 ## 
 ## Usage: ./setup.sh
 
-./env_setup.sh
+./scripts/lib/env_setup.sh
 
-find kafka/connect-mqtt/connectors -type f -name "*.json" -exec ./connector_setup.sh {} \;
+find kafka/connect-mqtt/connectors -type f -name "*.json" -exec ./scripts/lib/connector_setup.sh {} \;

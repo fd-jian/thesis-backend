@@ -19,4 +19,4 @@ echo $OVERWRITE | grep -q -e "^y$" -e "^yes$" &&
     echo $OVERWRITE | grep -q -e "^n$" -e "^no$" &&
     echo "Not going to overwrite file." && 
     exit 1 ||
-    ./check_overwrite.sh "$1"
+    ./scripts/lib/check_overwrite.sh "$1"

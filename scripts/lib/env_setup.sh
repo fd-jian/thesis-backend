@@ -10,7 +10,7 @@ ENV_PATH=".env"
 
 echo Setup docker-compose .env file
 
-./check_overwrite.sh "$ENV_PATH" ||
+./scripts/lib/check_overwrite.sh "$ENV_PATH" ||
     exit 1
 
 printf "Enter $TXT_MQTT_BROKER admin user: "
@@ -27,15 +27,22 @@ printf "Enter $TXT_IND_SERVICE password: "
 read -rs INDI_PW
 echo
 
+printf "Enter certificate directory: "
+read -rs CERTS_DIR
+echo
+
 # use bcrypt docker container to has pw, easiest platform independent bcrypt solution
 # TODO: do not use bcrypt in indicator-service to allow providing pw in cleartext.
 INDI_PW=$(docker run --rm epicsoft/bcrypt hash "changeme" 10)
+
+test -f "$ENV_PATH" && cp "$ENV_PATH" "$ENV_PATH".bak
 
 cat > "$ENV_PATH" <<-EOM
 MQTT_SERVER_USERNAME=$MQTT_USER
 MQTT_SERVER_PASSWORD=$MQTT_PW
 INDICATOR_SERVICE_USERNAME=$INDI_USER
 INDICATOR_SERVICE_BCRYPT_PW='${INDI_PW}'
+CERTS_DIR='${CERTS_DIR}'
 EOM
 
 echo "Env file written to '$ENV_PATH'."

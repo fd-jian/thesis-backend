@@ -12,7 +12,7 @@ echo "Setup connector at '"$1"'."
 
 ENV_PATH="${1%%json}env"
 
-./check_overwrite.sh "$ENV_PATH" || 
+./scripts/lib/check_overwrite.sh "$ENV_PATH" || 
     exit 1
 
 printf "Enter MQTT broker url: "

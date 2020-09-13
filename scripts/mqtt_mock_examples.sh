@@ -1,6 +1,6 @@
 #!/bin/sh
 
-echo "this script is not meant to be executed" >&2
+echo "This script contains examples not meant to be executed" >&2
 exit 1
 
 for i in $(seq 1 5); do
