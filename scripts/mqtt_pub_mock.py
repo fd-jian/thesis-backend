@@ -16,12 +16,12 @@ from pathlib import Path
 ## TODO: Check if multithreading is possible within this script and handle a
 ##  thread number parameter.
 ##
-## Usage: python stress.py USER PASSWORD [BROKER_HOST] [USE_CUSTOM_CACERT] [BROKER_PORT]
+## Usage: mqtt_pub_mock.py USER PASSWORD [BROKER_HOST] [USE_CUSTOM_CACERT] [BROKER_PORT]
 ## Examples: 
-##   - python stress.py username password
-##   - python stress.py username password localhost
-##   - python stress.py username password localhost True
-##   - python stress.py username password localhost True 8883
+##   - mqtt_pub_mock.py username password
+##   - mqtt_pub_mock.py username password localhost
+##   - mqtt_pub_mock.py username password localhost 0
+##   - mqtt_pub_mock.py username password localhost 1 8883
 
 def on_connect(client, userdata, flags, rc): 
     print(f'Connected to client {client} with result code {str(rc)}')
@@ -49,7 +49,7 @@ arg_len=len(sys.argv)
 if arg_len < 3:
     sys.stderr.write('Error: Username and password must be provided\n\n')
     sys.stderr.write('Usage: ' + 
-            'stress.py USER PASSWORD [BROKER_HOST] [USE_CUSTOM_CACERT] [BROKER_PORT]\n')
+            'mqtt_pub_mock.py USER PASSWORD [BROKER_HOST] [USE_CUSTOM_CACERT] [BROKER_PORT]\n')
     do_exit(1)
 
 client.username_pw_set(sys.argv[1], sys.argv[2])
