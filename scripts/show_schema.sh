@@ -24,5 +24,5 @@ JQ_STR=
     }
 }
 
-curl -sfS $URL \
+curl -sfS "$URL" \
     | jq --raw-output "$JQ_STR" | jq

@@ -9,14 +9,18 @@
 
 test -f "$1" || exit 0
 
-echo "File at '"$1"' exists. Do you want to overwrite it? [y/n] "
+echo "File at '$1' exists. Do you want to overwrite it? [y/n] "
 
 read -r OVERWRITE
 
-echo $OVERWRITE | grep -q -e "^y$" -e "^yes$" && 
-    echo "Overwriting file." &&
-    exit 0 ||
-    echo $OVERWRITE | grep -q -e "^n$" -e "^no$" &&
-    echo "Not going to overwrite file." && 
-    exit 1 ||
-    ./scripts/lib/check_overwrite.sh "$1"
+{
+	echo "$OVERWRITE" | grep -q -e "^y$" -e "^yes$" &&
+		echo "Overwriting file." &&
+		exit 0
+} ||
+	{
+		echo "$OVERWRITE" | grep -q -e "^n$" -e "^no$" &&
+			echo "Not going to overwrite file." &&
+			exit 1
+	} ||
+	./scripts/lib/check_overwrite.sh "$1"

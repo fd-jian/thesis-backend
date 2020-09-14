@@ -21,10 +21,13 @@ push_file() {
     echo "Pushing schema '$1' to registry." &&
         curl -sfSX POST \
         -H "Content-Type: application/vnd.schemaregistry.v1+json" \
-        --data "{\"schema\":$(jq --compact-output '' "$1" | jq --raw-input '')}" \
+        --data "{\"schema\":$(jq --compact-output '' "$1" | 
+                jq --raw-input '')}" \
         "$SUBJECTS_URL/$SUBJECT_NAME/versions" &&
-        printf "\nSuccesfully pushed schema for subject '$SUBJECT_NAME' to registry.\n" ||
-        printf "\nError pushing schema for subject '$SUBJECT_NAME' to registry.\n"
+        printf "\nSuccesfully pushed schema for subject '%s' to registry.\n" \
+            "$SUBJECT_NAME" ||
+        printf "\nError pushing schema for subject '%s' to registry.\n" \
+            "$SUBJECT_NAME"
 }
 
 [ $# -lt "1" ] &&
@@ -36,7 +39,7 @@ for FILEPATH in "$@"; do
     # if argument is a directory, search subdirs for .avsc files to push
     if test -d "$FILEPATH"; then
         find "$FILEPATH" -type f -name "*.avsc" |
-            while read FILE; do
+            while read -r FILE; do
                 push_file "$FILE"
             done
     # if arugment is a file, push the file

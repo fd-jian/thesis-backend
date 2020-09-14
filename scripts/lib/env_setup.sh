@@ -13,22 +13,24 @@ echo Setup docker-compose .env file
 ./scripts/lib/check_overwrite.sh "$ENV_PATH" ||
     exit 1
 
-printf "Enter $TXT_MQTT_BROKER admin user: "
+printf 'Enter %s admin user: ' "$TXT_MQTT_BROKER"
 read -r MQTT_USER
 
-printf "Enter $TXT_MQTT_BROKER admin password: "
+printf 'Enter %s admin password: ' "$TXT_MQTT_BROKER"
+# shellcheck disable=SC2039
 read -rs MQTT_PW
 echo
 
-printf "Enter $TXT_IND_SERVICE user: "
+printf 'Enter %s user: ' "$TXT_IND_SERVICE"
 read -r INDI_USER
 
-printf "Enter $TXT_IND_SERVICE password: "
+printf 'Enter %s password: ' "$TXT_IND_SERVICE"
+# shellcheck disable=SC2039
 read -rs INDI_PW
 echo
 
 printf "Enter certificate directory: "
-read -rs CERTS_DIR
+read -r CERTS_DIR
 echo
 
 # use bcrypt docker container to has pw, easiest platform independent bcrypt solution
