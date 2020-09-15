@@ -24,4 +24,4 @@ scrape_configs:
   # metrics_path defaults to '/metrics'
   # scheme defaults to 'http'.
     static_configs:
-      - targets: ['kafka-connect:7071']
+      - targets: ['kafka-connect:7071','mosquitto-exporter:9234']

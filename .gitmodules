@@ -10,3 +10,6 @@
 [submodule "src/experience-sampling-service-backend"]
 	path = src/experience-sampling-service-backend
 	url = ssh://git@gitlab.tba-hosting.de:47478/edutec/thriller/experience-sampling-service-backend.git
+[submodule "src/mosquitto-exporter"]
+	path = src/mosquitto-exporter
+	url = ssh://git@gitlab.tba-hosting.de:47478/edutec/thriller/infrastructure-sub-mosquitto-promethus-exporter.git
