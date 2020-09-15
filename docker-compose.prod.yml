@@ -136,14 +136,15 @@ services:
       CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
       CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
       CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
+      #KAFKA_OPTS: -javaagent:/usr/app/jmx_prometheus_javaagent.jar=7071:/usr/app/prom-jmx-agent-config.yml -Djava.util.logging.config.file=/usr/app/logging.properties
       KAFKA_OPTS: -javaagent:/usr/app/jmx_prometheus_javaagent.jar=7071:/usr/app/prom-jmx-agent-config.yml
       TZ: "Europe/Berlin"
     volumes:
-        - kafka-plugins:/usr/share/java/kafka-extra
-        - ${CERTS_DIR:-./certs/default}/ca.crt:/etc/kafka/certs/ca.crt:ro
+      - kafka-plugins:/usr/share/java/kafka-extra
+      - ${CERTS_DIR:-./certs/default}/ca.crt:/etc/kafka/certs/ca.crt:ro
     depends_on:
-        - kafka
-        - kafka-connect-mqtt-lib
+      - kafka
+      - kafka-connect-mqtt-lib
 
   prometheus:
     image: prom/prometheus
