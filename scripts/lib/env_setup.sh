@@ -37,8 +37,6 @@ echo
 # TODO: do not use bcrypt in indicator-service to allow providing pw in cleartext.
 INDI_PW=$(docker run --rm epicsoft/bcrypt hash "changeme" 10)
 
-test -f "$ENV_PATH" && cp "$ENV_PATH" "$ENV_PATH".bak
-
 cat > "$ENV_PATH" <<-EOM
 MQTT_SERVER_USERNAME=$MQTT_USER
 MQTT_SERVER_PASSWORD=$MQTT_PW

@@ -16,6 +16,7 @@ read -r OVERWRITE
 {
 	echo "$OVERWRITE" | grep -q -e "^y$" -e "^yes$" &&
 		echo "Overwriting file." &&
+        cp "$1" "$1".bak
 		exit 0
 } ||
 	{
