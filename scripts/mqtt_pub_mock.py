@@ -74,8 +74,8 @@ try:
         ts = str(round(time.time() * 1000))
         client.publish(
             'sensors/linear_acceleration/12345',
-            '''{{
-                    "time": "{ts}",
+            f'''{{
+                    "time": {ts},
                     "sessionId": "testtest",
                     "values": [0.0,0.0,1.0]
                 }}''')
