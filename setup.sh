@@ -28,6 +28,20 @@
 ## 
 ## Usage: ./setup.sh
 
-./scripts/lib/env_setup.sh
+scripts/lib/env_setup.sh
 
-find kafka/connect-mqtt/connectors -type f -name "*.json" -exec ./scripts/lib/connector_setup.sh {} \;
+find kafka/connect-mqtt/connectors -type f -name "*.json" -exec scripts/lib/connector_setup.sh {} \;
+
+CONFIRM=
+while [ -z "$CONFIRM" ]; do
+    echo "Do you want to load the grafana init dump? [y/n]"
+    read -r ANSW
+    if echo "$ANSW" | grep -q -e "^y$" -e "^yes$"; then 
+        CONFIRM=1
+        echo "Loading grafana init dump..."
+        scripts/restore_grafana.sh grafana/0graf_init_data.tar.gz
+    elif echo "$ANSW" | grep -q -e "^n$" -e "^no$"; then 
+        CONFIRM=0
+        echo "Not loading grafana init dump. Skipping"
+    fi
+done

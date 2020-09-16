@@ -13,15 +13,13 @@ echo "File at '$1' exists. Do you want to overwrite it? [y/n] "
 
 read -r OVERWRITE
 
-{
-	echo "$OVERWRITE" | grep -q -e "^y$" -e "^yes$" &&
-		echo "Overwriting file." &&
+if echo "$OVERWRITE" | grep -q -e "^y$" -e "^yes$"; then
+    echo "Overwriting file." &&
         cp "$1" "$1".bak
-		exit 0
-} ||
-	{
-		echo "$OVERWRITE" | grep -q -e "^n$" -e "^no$" &&
-			echo "Not going to overwrite file." &&
-			exit 1
-	} ||
-	./scripts/lib/check_overwrite.sh "$1"
+        exit 0
+    elif echo "$OVERWRITE" | grep -q -e "^n$" -e "^no$"; then
+        echo "Not going to overwrite file." &&
+            exit 1
+    else
+        ./scripts/lib/check_overwrite.sh "$1"
+fi
