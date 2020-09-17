@@ -22,6 +22,10 @@ read_password "$(printf 'Enter %s password: ' "$TXT_MQTT_BROKER")"
 MQTT_PW="$REPLY"
 echo
 
+MQTT_PW_FILE="mosquitto/passwd"
+./scripts/lib/check_overwrite.sh "$MQTT_PW_FILE" && 
+    docker run --rm -it -v "$PWD"/mosquitto:/data eclipse-mosquitto mosquitto_passwd -c -b /data/passwd "$MQTT_USER" "$MQTT_PW"
+
 printf 'Enter %s user: ' "$TXT_IND_SERVICE"
 read -r INDI_USER
 

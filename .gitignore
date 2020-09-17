@@ -2,6 +2,7 @@
 /kafka/data
 /zookeeper/data
 /zookeeper/log
+/mosquitto/*.bak
 certs/
 /*.env*
 /kafka/connect-mqtt/connectors/*.env*
