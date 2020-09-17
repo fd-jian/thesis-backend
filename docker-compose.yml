@@ -21,8 +21,8 @@ services:
       - ${CERTS_DIR:-./certs/default}:/etc/certs:ro
     environment:
       BROKER_ENDPOINT: tls://mosquitto:8883
-      MQTT_USER: user
-      MQTT_PASS: changeme
+      MQTT_USER: ${MQTT_SERVER_USERNAME}
+      MQTT_PASS: ${MQTT_SERVER_PASSWORD}
       MQTT_CACERT: /etc/certs/ca.crt
 
   # Can be used to monitor mqtt messages. Also provides pub and sub MQTT client capabilities using `docker-compose exec mqtt-client <COMMAND>`.
