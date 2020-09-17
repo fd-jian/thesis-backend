@@ -8,6 +8,8 @@
 ##
 ## Usage: setup_connector.sh [CONFIG_PATH]
 
+. scripts/lib/read_s.sh
+
 echo "Setup connector at '$1'."
 
 ENV_PATH="${1%%json}env"
@@ -21,10 +23,8 @@ read -r MQTT_URL
 printf "Enter MQTT broker user: "
 read -r MQTT_USER
 
-printf "Enter MQTT broker password: "
-# shellcheck disable=SC2039
-read -rs MQTT_PW
-echo
+read_password "Enter MQTT broker password"
+MQTT_PW="$REPLY"
 
 cat > "$ENV_PATH" <<-EOM
 MQTT_SERVER_URL=$MQTT_URL

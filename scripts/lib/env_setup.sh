@@ -4,6 +4,8 @@
 ##
 ## Usage: env_setup.sh
 
+. scripts/lib/read_s.sh
+
 TXT_IND_SERVICE=indicator-service
 TXT_MQTT_BROKER="MQTT broker"
 ENV_PATH=".env"
@@ -16,17 +18,15 @@ echo Setup docker-compose .env file
 printf 'Enter %s admin user: ' "$TXT_MQTT_BROKER"
 read -r MQTT_USER
 
-printf 'Enter %s admin password: ' "$TXT_MQTT_BROKER"
-# shellcheck disable=SC2039
-read -rs MQTT_PW
+read_password "$(printf 'Enter %s password: ' "$TXT_MQTT_BROKER")"
+MQTT_PW="$REPLY"
 echo
 
 printf 'Enter %s user: ' "$TXT_IND_SERVICE"
 read -r INDI_USER
 
-printf 'Enter %s password: ' "$TXT_IND_SERVICE"
-# shellcheck disable=SC2039
-read -rs INDI_PW
+read_password "$(printf 'Enter %s password: ' "$TXT_IND_SERVICE")"
+INDI_PW="$REPLY"
 echo
 
 printf "Enter certificate directory: "
@@ -35,7 +35,7 @@ echo
 
 # use bcrypt docker container to has pw, easiest platform independent bcrypt solution
 # TODO: do not use bcrypt in indicator-service to allow providing pw in cleartext.
-INDI_PW=$(docker run --rm epicsoft/bcrypt hash "changeme" 10)
+INDI_PW=$(docker run --rm epicsoft/bcrypt hash "$INDI_PW" 10)
 
 cat > "$ENV_PATH" <<-EOM
 MQTT_SERVER_USERNAME=$MQTT_USER
