@@ -220,35 +220,6 @@ services:
       - ./kafka/connect-mqtt/connectors:/data/connectors:ro
       - ./kafka/connect-mqtt/auto-schemas:/data/auto-schemas:ro
 
-  redis:
-    image: redis:latest
-    command: redis-server
-    ports:
-      - "127.0.0.1:6379:6379"
-      - "127.0.0.1:6380:6380"
-
-  web:
-    build: ./src/experience-sampling-service-backend
-    command: python manage.py runserver 0.0.0.0:8002
-    ports:
-      - "127.0.0.1:18002:8002"
-#  worker_channels:
-#
-#    build: ./src/experience-sampling-service-backend/experiencesampling
-#    command: python manage.py runworker channels
-#    volumes:
-#      - .:/code
-#    links:
-#      - redis
-
-  channels:
-    build: ./src/experience-sampling-service-backend
-    command: daphne -p 8001 experiencesampling.asgi:application
-    ports:
-      - "127.0.0.1:18001:8001"
-    links:
-     - redis
-
 volumes:
   kafka-plugins:
   grafana-storage:
